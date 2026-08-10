@@ -51,7 +51,7 @@ export const simulateDay = (dailySolar, load, peakPct, usableCapacity, rte, rate
 };
 
 export const runRoiSimulation = ({
-  loanAmount, loanInterest, loanTerm, proposalMode, existingSolarType,
+  loanAmount, incentives = 0, loanInterest, loanTerm, proposalMode, existingSolarType,
   existingSolarBalance, existingSolarPayment, ppaEscalator,
   batteryCapacity, depthOfDischarge, minSoC, roundTripEfficiency, degradationRate,
   dailyUsage, peakUsagePercent, ratePeak, rateOffPeak, inflationRate,
@@ -59,14 +59,15 @@ export const runRoiSimulation = ({
   strategy = 'self',
 }) => {
   const safe = (val) => isNaN(val) ? 0 : val;
-  const monthlyPaymentNew = calculatePMT(safe(loanAmount), safe(loanInterest), safe(loanTerm));
+  const netSystemCost = Math.max(0, safe(loanAmount) - Math.max(0, safe(incentives)));
+  const monthlyPaymentNew = calculatePMT(netSystemCost, safe(loanInterest), safe(loanTerm));
     const data = [];
-    let balanceNew = safe(loanAmount);
+    let balanceNew = netSystemCost;
     let balanceExistingLoan = existingSolarType === 'loan' ? safe(existingSolarBalance) : 0;
     let currentMonthlyPPA = safe(existingSolarPayment);
     const ppaEsc = safe(ppaEscalator) / 100;
     let cumulativeStatusQuo = existingSolarType === 'loan' ? balanceExistingLoan : 0;
-    let cumulativeProposed = safe(loanAmount) + (existingSolarType === 'loan' ? balanceExistingLoan : 0);
+    let cumulativeProposed = netSystemCost + (existingSolarType === 'loan' ? balanceExistingLoan : 0);
     let cumulativeGridOnly = 0;
     let cumulativeProposedSpend = 0;
     let cumulativeGridSpend = 0;

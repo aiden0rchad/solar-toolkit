@@ -23,7 +23,7 @@ const BillDecoder = ({ onExport }) => {
 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn">
-      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Search className="text-blue-500" /> Smart Bill Decoder</h2><p className="text-slate-400">Enter client's actual bill amounts. See what solar eliminates.</p></div>
+      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Search className="text-blue-500" /> Smart Bill Decoder</h2><p className="text-slate-400">Enter your bill amounts. See what solar can reduce and what stays.</p></div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="bg-slate-800/50 p-8 rounded-xl shadow-lg border border-slate-700/50 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
@@ -58,7 +58,7 @@ const BillDecoder = ({ onExport }) => {
             <Card className="p-4 text-center"><p className="text-xs font-bold text-slate-400 uppercase mb-1">Remaining w/ Solar</p><p className="text-2xl font-black text-slate-300">${remaining.toFixed(0)}</p><p className="text-xs text-slate-500">NBCs + fees</p></Card>
           </div>
           <div className="bg-slate-800/30 p-5 rounded-2xl border border-slate-700/50">
-            <h3 className="font-bold text-slate-200 mb-3">Talking Points</h3>
+            <h3 className="font-bold text-slate-200 mb-3">What this means for you</h3>
             <ul className="space-y-3">
               <li className="flex gap-3"><CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /><p className="text-sm text-slate-400"><strong className="text-slate-100">Eliminates {((solarSaves / totalBill) * 100).toFixed(0)}%:</strong> Generation + Transmission wiped out.</p></li>
               <li className="flex gap-3"><AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" /><p className="text-sm text-slate-400"><strong className="text-slate-100">Residual ~${remaining.toFixed(0)}/mo:</strong> NBCs and connection fees remain.</p></li>

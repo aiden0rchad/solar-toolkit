@@ -159,4 +159,9 @@ describe('runRoiSimulation', () => {
       }
     `);
   });
+
+  it('reaches break-even sooner when incentives reduce the year-0 cost', () => {
+    const withIncentives = runRoiSimulation({ ...fixture, incentives: 5000 });
+    expect(Number(findBreakEven(withIncentives))).toBeLessThan(Number(findBreakEven(simulation)));
+  });
 });

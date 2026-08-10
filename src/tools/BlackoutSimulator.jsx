@@ -57,7 +57,7 @@ const BlackoutSimulator = ({ onExport }) => {
 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn">
-      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Battery className="text-emerald-400" /> Blackout Simulator</h2><p className="text-slate-400">How long will your battery last during a grid outage?</p></div>
+      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Battery className="text-emerald-400" /> Blackout Simulator</h2><p className="text-slate-400">Choose what you want to keep running and see how long your battery lasts.</p></div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 space-y-4">
           <Card className="p-5">

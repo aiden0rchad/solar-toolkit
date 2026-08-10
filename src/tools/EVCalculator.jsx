@@ -159,7 +159,7 @@ const EVCalculator = ({ onExport }) => {
     <div className="max-w-7xl mx-auto animate-fadeIn">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Car className="text-sky-400" /> EV vs. Gas Calculator</h2>
-        <p className="text-slate-400">Compare {evDatabase.length} electric vehicles across {makes.length} manufacturers. Calculate 5-year savings.</p>
+        <p className="text-slate-400">See whether an EV would cost you less each month and over five years. Compare {evDatabase.length} models from {makes.length} manufacturers.</p>
       </div>
 
       {/* Filters */}

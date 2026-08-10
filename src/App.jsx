@@ -18,8 +18,13 @@ const educationClasses = {
   nem3: ['bg-red-500/10 text-red-400', 'text-slate-400 hover:bg-slate-800/30'],
 };
 
+const viewFromHash = () => {
+  const id = window.location.hash.replace(/^#\/?/, '');
+  return TOOLS.some(tool => tool.id === id) ? id : 'home';
+};
+
 const App = () => {
-  const [view, setView] = useState('consult');
+  const [view, setView] = useState(viewFromHash);
   const [proposalData, setProposalData] = useState(() => {
     try {
       const saved = localStorage.getItem('solartoolkit-proposal');
@@ -32,14 +37,37 @@ const App = () => {
     try { localStorage.setItem('solartoolkit-proposal', JSON.stringify(proposalData)); } catch { /* storage full/blocked */ }
   }, [proposalData]);
 
+  useEffect(() => {
+    const handleHashChange = () => setView(viewFromHash());
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    const expectedHash = `#/${view}`;
+    const currentHash = window.location.hash;
+    if (currentHash !== expectedHash) {
+      const currentId = currentHash.replace(/^#\/?/, '');
+      const isKnownView = TOOLS.some(tool => tool.id === currentId);
+      if (!currentHash || !isKnownView) window.history.replaceState(window.history.state, '', expectedHash);
+      else window.location.hash = expectedHash;
+    }
+    const tool = TOOLS.find(item => item.id === view) || TOOLS[0];
+    document.title = `${tool.title} — SolarPro Toolkit`;
+  }, [view]);
+
   const exportToProposal = (section, data) => {
     setProposalData(prev => ({ ...prev, [section]: data }));
     setView('proposal');
   };
 
-  const activeTool = TOOLS.find(tool => tool.id === view) || TOOLS.find(tool => tool.id === 'calculator');
+  const activeTool = TOOLS.find(tool => tool.id === view) || TOOLS[0];
   const ActiveComponent = activeTool.component;
-  const activeProps = activeTool.id === 'consult'
+  const activeProps = activeTool.id === 'home'
+    ? { onNavigate: setView, tools: TOOLS }
+    : activeTool.id === 'simple-roi'
+      ? { onNavigate: setView }
+    : activeTool.id === 'consult'
     ? { onExport: data => exportToProposal('roi', data), goProMode: () => setView('calculator') }
     : activeTool.id === 'proposal'
       ? { proposalData, setProposalData }
@@ -52,7 +80,7 @@ const App = () => {
   return (
     <div className="min-h-screen font-sans text-slate-200 flex" style={{ background: 'var(--bg-primary)' }}>
       {/* Sidebar Navigation */}
-      <div className="w-64 flex-shrink-0 hidden lg:block print:hidden" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)', borderRight: '1px solid rgba(148,163,184,0.08)' }}>
+      <div className="w-64 h-screen overflow-y-auto flex-shrink-0 hidden lg:block print:hidden" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)', borderRight: '1px solid rgba(148,163,184,0.08)' }}>
         <div className="p-6">
           <h1 className="text-xl font-black text-slate-100 flex items-center gap-2"><Zap className="text-amber-400 fill-amber-400" /> SolarPro</h1>
           <p className="text-xs text-slate-400 mt-1 font-medium uppercase tracking-wider">Consultant Toolkit</p>

@@ -47,7 +47,7 @@ const UsageEstimator = ({ onExport }) => {
 
   return (
     <div className="max-w-5xl mx-auto animate-fadeIn">
-      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Calculator className="text-sky-400" /> Usage Estimator</h2><p className="text-slate-400">Estimate client usage when they don't have a bill handy.</p></div>
+      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Calculator className="text-sky-400" /> Usage Estimator</h2><p className="text-slate-400">Estimate your home's electricity use when you don't have a bill handy.</p></div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           <h3 className="font-bold text-lg mb-4 text-slate-200">Home Details</h3>
