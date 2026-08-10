@@ -1,4 +1,4 @@
-import { ArrowRight, Battery, Car, Sun } from 'lucide-react';
+import { ArrowRight, Battery, Car, Lock, Sun } from 'lucide-react';
 
 const journeys = [
   { id: 'simple-roi', title: 'Is solar worth it for me?', copy: 'Start with your bill and get a plain-language savings estimate.', icon: Sun, color: 'amber' },
@@ -38,9 +38,9 @@ const HomeLanding = ({ onNavigate, tools }) => {
     <section className="mt-10 border-t border-slate-700/40 pt-6" aria-label="More tools">
       <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">More calculators and consultant tools</p>
       <div className="flex flex-wrap gap-2">
-        {moreTools.map(({ id, navLabel, icon: Icon }) => (
+        {moreTools.map(({ id, navLabel, icon: Icon, tier }) => (
           <button key={id} onClick={() => onNavigate(id)} className="flex items-center gap-2 rounded-lg border border-slate-700/50 px-3 py-2 text-xs font-bold text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200">
-            <Icon size={14} aria-hidden="true" /> {navLabel}
+            <Icon size={14} aria-hidden="true" /> {navLabel} {tier === 'pro' && <Lock size={12} className="text-amber-400" aria-label="Pro tool" />}
           </button>
         ))}
       </div>

@@ -1,5 +1,8 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Zap } from 'lucide-react';
+import { Lock, Zap } from 'lucide-react';
+import ProLockCard from './components/ProLockCard';
+import ProUpsellModal from './components/ProUpsellModal';
+import { useEntitlement } from './entitlement/useEntitlement';
 import { TOOLS } from './tools/registry';
 
 const EXPORT_SECTIONS = {
@@ -24,7 +27,9 @@ const viewFromHash = () => {
 };
 
 const App = () => {
+  const { isPro } = useEntitlement();
   const [view, setView] = useState(viewFromHash);
+  const [showProUpsell, setShowProUpsell] = useState(false);
   const [proposalData, setProposalData] = useState(() => {
     try {
       const saved = localStorage.getItem('solartoolkit-proposal');
@@ -57,6 +62,10 @@ const App = () => {
   }, [view]);
 
   const exportToProposal = (section, data) => {
+    if (!isPro) {
+      setShowProUpsell(true);
+      return;
+    }
     setProposalData(prev => ({ ...prev, [section]: data }));
     setView('proposal');
   };
@@ -88,7 +97,7 @@ const App = () => {
         <nav className="mt-2 px-4 space-y-1">
           {mainTools.map(tool => {
             const Icon = tool.icon;
-            return <button key={tool.id} onClick={() => setView(tool.id)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${view === tool.id ? 'bg-sky-500/15 text-sky-400 shadow-lg shadow-sky-500/10' : 'text-slate-400 hover:bg-slate-700/40'}`}><Icon size={18} /> {tool.navLabel}</button>;
+            return <button key={tool.id} onClick={() => setView(tool.id)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${view === tool.id ? 'bg-sky-500/15 text-sky-400 shadow-lg shadow-sky-500/10' : 'text-slate-400 hover:bg-slate-700/40'}`}><Icon size={18} /> <span className="flex-1 text-left">{tool.navLabel}</span>{tool.tier === 'pro' && <Lock size={13} className="text-amber-400" aria-label="Pro tool" />}</button>;
           })}
           <div className="pt-4 pb-2 px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">NEM Education</div>
           {educationTools.map(tool => {
@@ -102,15 +111,18 @@ const App = () => {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center print:hidden" style={{ background: 'rgba(11,17,32,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
         <div className="font-bold flex items-center gap-2"><Zap className="text-amber-400 fill-amber-400" size={20} /> SolarPro</div>
         <select value={view} onChange={(e) => setView(e.target.value)} className="bg-slate-800/30 border border-slate-700/50 rounded-lg px-3 py-1 text-sm font-bold">
-          {TOOLS.map(tool => <option key={tool.id} value={tool.id}>{tool.navLabel}</option>)}
+          {TOOLS.map(tool => <option key={tool.id} value={tool.id}>{tool.navLabel}{tool.tier === 'pro' ? ' 🔒' : ''}</option>)}
         </select>
       </div>
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-8 mt-14 lg:mt-0 print:m-0 print:p-0">
-        <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" /></div>}>
-          <ActiveComponent {...activeProps} />
-        </Suspense>
+        {activeTool.tier === 'pro' && !isPro
+          ? <ProLockCard tool={activeTool} />
+          : <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" /></div>}>
+              <ActiveComponent {...activeProps} />
+            </Suspense>}
       </div>
+      {showProUpsell && <ProUpsellModal onClose={() => setShowProUpsell(false)} />}
     </div>
   );
 };
