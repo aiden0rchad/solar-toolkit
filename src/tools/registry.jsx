@@ -1,15 +1,19 @@
+import { lazy } from 'react';
 import { Battery, Calculator, Car, FileText, History, Home, LayoutDashboard, Lightbulb, Presentation, Search, Sun } from 'lucide-react';
-import ApplianceAuditor from './ApplianceAuditor';
-import BillDecoder from './BillDecoder';
-import BlackoutSimulator from './BlackoutSimulator';
-import ConsultWizard from './ConsultWizard';
-import EVCalculator from './EVCalculator';
 import HomeLanding from './HomeLanding';
-import ProposalGenerator from './ProposalGenerator';
-import ROICalculator from './ROICalculator';
-import SimpleSolarROI from './SimpleSolarROI';
-import UsageEstimator from './UsageEstimator';
-import { NEM1Explainer, NEM2Explainer, NEM3Explainer } from './nem';
+
+const ApplianceAuditor = lazy(() => import('./ApplianceAuditor'));
+const BillDecoder = lazy(() => import('./BillDecoder'));
+const BlackoutSimulator = lazy(() => import('./BlackoutSimulator'));
+const ConsultWizard = lazy(() => import('./ConsultWizard'));
+const EVCalculator = lazy(() => import('./EVCalculator'));
+const ProposalGenerator = lazy(() => import('./ProposalGenerator'));
+const ROICalculator = lazy(() => import('./ROICalculator'));
+const SimpleSolarROI = lazy(() => import('./SimpleSolarROI'));
+const UsageEstimator = lazy(() => import('./UsageEstimator'));
+const NEM1Explainer = lazy(() => import('./nem').then(module => ({ default: module.NEM1Explainer })));
+const NEM2Explainer = lazy(() => import('./nem').then(module => ({ default: module.NEM2Explainer })));
+const NEM3Explainer = lazy(() => import('./nem').then(module => ({ default: module.NEM3Explainer })));
 
 // Each entry: { id, title, navLabel, icon, section, component, needsExport? }
 export const TOOLS = [

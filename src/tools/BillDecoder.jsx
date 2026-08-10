@@ -32,7 +32,7 @@ const BillDecoder = ({ onExport }) => {
             <div className="text-right"><p className="text-sm text-slate-400">Edit amounts below</p></div>
           </div>
           <div className="space-y-3">
-            {lineItems.map((item, idx) => (
+            {lineItems.map((item) => (
               <div key={item.id} className={`group relative p-3 -mx-3 rounded-lg transition-colors cursor-help ${hoveredTerm === item.id ? 'bg-amber-500/10' : 'hover:bg-slate-700/20'}`} onMouseEnter={() => setHoveredTerm(item.id)} onMouseLeave={() => setHoveredTerm(null)}>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">

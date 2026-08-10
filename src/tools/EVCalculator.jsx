@@ -34,8 +34,8 @@ const EVCalculator = ({ onExport }) => {
   const [gasPrice, setGasPrice] = useState(4.80);
   const [iceMPG, setIceMPG] = useState(25);
   const [elecRate, setElecRate] = useState(0.35);
-  const [iceMaintCost, setIceMaintCost] = useState(800);
-  const [evMaintCost, setEvMaintCost] = useState(300);
+  const iceMaintCost = 800;
+  const evMaintCost = 300;
 
   // Financing & Insurance
   const [currentCarStatus, setCurrentCarStatus] = useState('paidoff'); // paidoff | loan

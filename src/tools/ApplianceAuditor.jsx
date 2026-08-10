@@ -9,7 +9,7 @@ const ApplianceAuditor = ({ onExport }) => {
   const [items, setItems] = useState([]);
   const [customName, setCustomName] = useState('');
   const [customKwh, setCustomKwh] = useState('');
-  const [utilityRate, setUtilityRate] = useState(0.40);
+  const utilityRate = 0.40;
   const addItem = (preset) => setItems([...items, { ...preset, id: Date.now() + Math.random() }]);
   const addCustomItem = () => { if (customName && customKwh > 0) { setItems([...items, { name: customName, kwh: parseFloat(customKwh), icon: '⚙️', id: Date.now() }]); setCustomName(''); setCustomKwh(''); } };
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
