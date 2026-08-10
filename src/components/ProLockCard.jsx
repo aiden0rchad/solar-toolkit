@@ -16,6 +16,8 @@ const proDetails = {
       'Model a retrofit over an existing solar loan or PPA, escalator included',
       'Full rate control: peak, off-peak, export, fixed charges and annual escalation',
       '25-year projection with seasonal load shapes, regional sun profiles and modelled degradation',
+      'Compare self-consumption with guarded grid-arbitrage battery dispatch',
+      'Control battery depth of discharge, reserve, round-trip efficiency and annual degradation',
     ],
   },
   proposal: {

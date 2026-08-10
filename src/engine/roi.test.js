@@ -164,4 +164,18 @@ describe('runRoiSimulation', () => {
     const withIncentives = runRoiSimulation({ ...fixture, incentives: 5000 });
     expect(Number(findBreakEven(withIncentives))).toBeLessThan(Number(findBreakEven(simulation)));
   });
+
+  it('does not improve the 25-year outcome when depth of discharge reduces usable capacity', () => {
+    const reducedCapacity = runRoiSimulation({ ...fixture, depthOfDischarge: 50 });
+    expect(reducedCapacity[25].proposed).toBeGreaterThanOrEqual(simulation[25].proposed);
+  });
+
+  it('applies guarded arbitrage across the 25-year simulation', () => {
+    const arbitrage = runRoiSimulation({ ...fixture, strategy: 'arbitrage' });
+    expect(arbitrage[25].proposed).toBeLessThanOrEqual(simulation[25].proposed);
+
+    const guardedFixture = { ...fixture, ratePeak: 0.35, rateOffPeak: 0.32 };
+    expect(runRoiSimulation({ ...guardedFixture, strategy: 'arbitrage' }))
+      .toEqual(runRoiSimulation({ ...guardedFixture, strategy: 'self' }));
+  });
 });

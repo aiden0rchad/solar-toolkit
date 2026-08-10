@@ -8,7 +8,7 @@ export const Card = ({ children, className = "" }) => (
   </div>
 );
 
-export const InputField = ({ label, value, onChange, unit, step = "0.1", tooltip, min = 0, disabled = false, readOnly = false }) => (
+export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1", tooltip, min = 0, disabled = false, readOnly = false }) => (
   <div className={`mb-4 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
     <div className="flex items-center justify-between mb-1">
       <label className="text-sm font-medium text-slate-300 flex items-center gap-1">
@@ -33,6 +33,7 @@ export const InputField = ({ label, value, onChange, unit, step = "0.1", tooltip
           onChange(val === '' ? NaN : parseFloat(val));
         }
       }}
+      onBlur={onBlur}
       min={min}
       disabled={disabled || readOnly}
       readOnly={readOnly}
