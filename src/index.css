@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   SOLARPRO DARK THEME DESIGN SYSTEM
+   ======================================== */
+
+:root {
+  --bg-primary: #0b1120;
+  --bg-secondary: #111827;
+  --bg-card: rgba(17, 24, 39, 0.7);
+  --bg-card-hover: rgba(30, 41, 59, 0.8);
+  --border-subtle: rgba(148, 163, 184, 0.12);
+  --border-glow: rgba(56, 189, 248, 0.25);
+  --accent-blue: #38bdf8;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1200px 800px at 12% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
+    radial-gradient(1000px 700px at 108% 112%, rgba(52, 211, 153, 0.05), transparent 60%),
+    radial-gradient(800px 500px at 85% -5%, rgba(251, 191, 36, 0.04), transparent 55%),
+    var(--bg-primary);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.3); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Staggered children animation */
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* ========================================
+   GLASSMORPHISM UTILITIES
+   ======================================== */
+
+.glass {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-light {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(148, 163, 184, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   DARK THEME INPUT OVERRIDES
+   ======================================== */
+
+input[type="number"],
+input[type="text"],
+select {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Checkbox dark styling */
+input[type="checkbox"] {
+  accent-color: var(--accent-emerald);
+}
+
+/* ========================================
+   RECHARTS DARK THEME OVERRIDES
+   ======================================== */
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(148, 163, 184, 0.08) !important;
+}
+
+.recharts-text {
+  fill: var(--text-secondary) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+  padding: 12px 16px !important;
+}
+
+.recharts-tooltip-item {
+  color: var(--text-primary) !important;
+}
+
+.recharts-legend-item-text {
+  color: var(--text-secondary) !important;
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #proposal-content, #proposal-content * {
+    visibility: visible;
+  }
+  
+  #proposal-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    border: none;
+    box-shadow: none;
+    color: #000;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
