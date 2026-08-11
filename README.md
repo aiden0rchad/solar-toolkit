@@ -1,77 +1,79 @@
-# ☀️ SolarPro Toolkit
+# SolarPro Toolkit
 
-A browser-based suite of interactive tools for **solar + battery decisions**. Model savings, size a system, decode a utility bill, simulate blackout runtime, compare EV charging costs, and generate a printable proposal.
+**Honest solar, battery, and EV math — free, in your browser.**
 
-Everything runs **100% client-side** — no backend, no accounts, no data ever leaves your machine.
+### ▶ [Open the app](https://aiden0rchad.github.io/solar-toolkit/) — no signup, no tracking, nothing leaves your machine.
 
-> **Free for personal, noncommercial use** — homeowners exploring solar for their own house, this is for you.
-> **Using it for work (sales, consulting, any business use) requires a paid commercial license** — see [License](#license).
+[![SolarPro Toolkit](docs/media/landing.png)](https://aiden0rchad.github.io/solar-toolkit/)
 
-<!-- TODO: screenshot — docs/screenshot.png -->
+Start with your question:
 
-## The tools
+- **[Is solar worth it for me?](https://aiden0rchad.github.io/solar-toolkit/#/simple-roi)** — enter a monthly bill, get payback and 25-year savings with every assumption inspectable.
+- **[Will a battery keep my lights on?](https://aiden0rchad.github.io/solar-toolkit/#/blackout)** — pick what needs to run in an outage and see how long it runs.
+- **[Should I switch to an EV?](https://aiden0rchad.github.io/solar-toolkit/#/ev)** — real monthly and 5-year cost against your current car.
 
-| Tool | What it's for |
+## Why this calculator doesn't lie to you
+
+Most solar calculators are lead-generation for installers. This one is built to answer the question, including when the answer is "no":
+
+- **No dead tax credits.** The 30% US federal residential credit (IRC 25D) ended for systems installed after Dec 31, 2025. Many calculators still bake it in; here incentives default to **$0** and you enter only programs you've actually confirmed.
+- **Winter is the test.** Production is modeled monthly (PVWatts-style factors, ~14% system losses, 0.5%/yr panel degradation) — a Central Valley December produces less than a third of July, and the numbers show it.
+- **Real battery physics.** The battery only discharges what solar surplus actually stored, after round-trip losses, depth-of-discharge and reserve limits, and annual degradation. No free energy.
+- **Honest billing.** Time-of-use peak/off-peak rates, NEM 3.0-style low export credit, fixed charges solar can't remove, proper amortized loan payments.
+- **Every assumption is disclosed.** Each result ships with an expandable "assumptions behind these numbers" panel — rates, escalation, degradation, export credit — plus the estimate disclaimer.
+
+Defaults are California-centric (TOU rates, NEM 3.0, CA climate profiles), and everything is editable live.
+
+## The free tools
+
+| Tool | What it answers |
 |---|---|
-| **Client Consult Wizard** | Guided flow for a live consultation — collects the basics and hands off to the full ROI engine ("Pro mode") when needed. |
-| **ROI Calculator (Pro)** | The headline tool — 25-year month-by-month simulation of payback, bill-before vs bill-after, and lifetime savings for a **new solar + battery** system or a **battery retrofit** on existing solar (loan or PPA). |
-| **Usage Estimator** | Estimate whole-home kWh usage as an input to the other tools. |
-| **Appliance Auditor** | Add up future loads (EV, pool pump, HVAC…) to avoid under-sizing the system. |
-| **EV Switch** | Home-charging cost/savings modeling backed by a built-in EV database with efficiency/range/battery specs by year and trim. |
-| **Blackout Simulator** | "How long will my battery last in an outage?" Pick a battery, toggle the appliances running, optionally add solar recharge, and watch the hourly depletion curve. |
-| **Smart Bill Decoder** | Breaks a utility bill into its parts and shows which pieces solar can eliminate — and which it can't. Sets honest expectations. |
-| **Proposal Generator** | Collects exported results from every tool into a customer-facing, printable proposal. |
-| **NEM Education** | Three explainer pages on NEM 1.0 / 2.0 / 3.0 net-metering policy, built for showing a customer *why* batteries matter under NEM 3.0. |
+| **Solar Savings (Simple)** | Bill in, payback out — a thin wrapper over the same engine as the Pro calculator, never a dumber one. |
+| **Blackout Simulator** | How long a battery actually runs your fridge, Wi-Fi, CPAP… |
+| **EV Switch** | EV vs. your current car, with a built-in vehicle database. |
+| **Usage Estimator** | Whole-home kWh estimate when you don't have a bill handy. |
+| **Appliance Auditor** | Add up future loads (EV, pool pump, HVAC…) before sizing anything. |
+| **Smart Bill Decoder** | Which parts of your bill solar removes — and which it can't. |
+| **NEM 1.0 / 2.0 / 3.0 explainers** | Why batteries matter under NEM 3.0. |
 
-## How the modeling works
+<a id="pro"></a>
 
-The ROI engine is not a straight-line "bill × 25 years" shortcut:
+## SolarPro Pro — for consultants
 
-- **Seasonal solar production** — monthly production factors (PVWatts-style, ~14% system losses) for several climate profiles, with 0.5%/yr panel degradation.
-- **Seasonal load shapes** — flat, summer-peak (AC), winter-peak (heat), or dual-peak households.
-- **Real battery physics** — the battery only discharges what solar surplus actually stored, with round-trip efficiency losses, depth-of-discharge and reserve-SoC limits, and annual capacity degradation.
-- **Time-of-use billing** — peak vs off-peak rates, low export compensation (NEM 3.0-style), non-bypassable fixed charges, and an optional off-peak → peak **arbitrage** charging strategy.
-- **Honest financing** — proper amortized loan payments (PMT), existing-solar loan payoff or PPA escalators for retrofits, and break-even computed against the grid-only baseline.
+The consultation workflow is a paid tier: the **Client Consult Wizard** (guided six-step flow you run live with a client), the **full-control ROI Calculator** (retrofit-over-loan/PPA modeling, full rate control, battery dispatch strategy with depth-of-discharge, reserve, round-trip and degradation controls), and the **Proposal Generator** (branded printable client proposals with impact figures derived from the modeled system, plus every tool's "Export to Proposal").
 
-Defaults are California-centric (NEM 3.0, TOU rates, CA climate profiles) but everything is editable live.
+Licensing is being set up now — **watch or star the repo** and the purchase link will appear here. A Pro subscription doubles as the commercial-use license this repo's [license](#license) requires.
 
-## Run it
+## Self-host
 
-```bash
-npm install
-npm run dev        # dev server with hot reload
-npm run build      # production build → dist/
-npm run preview    # serve the built dist/ locally
-```
-
-### Docker
-
-Prebuilt images (amd64 + arm64) are published to GHCR on every push:
+Prebuilt images (amd64 + arm64) publish to GHCR on every push:
 
 ```bash
 docker run -p 8080:80 ghcr.io/aiden0rchad/solar-toolkit:latest    # → http://localhost:8080
 ```
 
-Or build it yourself:
+Or build it yourself: `docker build -t solar-toolkit . && docker run -p 8080:80 solar-toolkit` — `node:22-alpine` compiles, `nginx:alpine` serves the static bundle.
+
+The app makes **zero external requests** (fonts are self-hosted), so it runs fully offline once loaded.
+
+## Development
 
 ```bash
-docker build -t solar-toolkit .
-docker run -p 8080:80 solar-toolkit
+npm install
+npm run dev        # dev server
+npm test           # engine test suite (Vitest)
+npm run build      # production build → dist/
 ```
 
-Multi-stage build: `node:22-alpine` compiles, `nginx:alpine` serves the static bundle on port 80.
-
-## Tech
-
-React 18 · Vite 5 · TailwindCSS 3 · Recharts · lucide-react — plain JSX, no TypeScript, no backend.
+React 18 · Vite 5 · Tailwind 3 · Recharts · lucide-react — plain JSX, no TypeScript, no backend. The ROI engine is pure functions in `src/engine/`; tools register in `src/tools/registry.jsx`.
 
 ## License
 
-Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md):
+[PolyForm Noncommercial 1.0.0](LICENSE.md):
 
-- ✅ **Personal / noncommercial use is free** — run it, study it, modify it for yourself.
-- 💼 **Commercial use requires a paid license.** That includes using it as a tool in your job — sales presentations, consulting, lead generation, or bundling it into a product or service. [Open an issue](../../issues) to arrange a commercial license.
+- ✅ **Personal, noncommercial use is free** — run it, study it, modify it for your own house.
+- 💼 **Any business use requires a commercial license** — sales, consulting, lead generation, bundling. That's what [SolarPro Pro](#pro) is.
 
 ## Disclaimer
 
-All numbers are **estimates for illustration and conversation**, not a quote, engineering design, or financial advice. Utility rates, incentives, and net-metering policy vary by utility and change over time — verify against your actual tariff before making decisions.
+All outputs are **estimates for orientation and conversation** — not a quote, engineering design, or financial advice. Rates, incentives, and net-metering policy vary by utility and change over time; verify against your actual tariff before signing anything.
