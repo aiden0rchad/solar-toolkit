@@ -4,6 +4,7 @@ import { ArrowRight, Battery, Calculator, Car, CheckCircle2, DollarSign, FileTex
 import { Card, InputField } from '../components/ui';
 import { axisStroke, darkTooltip, gridStroke } from '../components/chartTheme';
 import { evDatabase } from '../data/evDatabase';
+import { computeEvStats, evLoanPayment } from '../engine/ev';
 
 // --- TOOL: EV CALCULATOR (Expanded) ---
 const EVCalculator = ({ onExport }) => {
@@ -57,13 +58,7 @@ const EVCalculator = ({ onExport }) => {
   const [tradeInValue, setTradeInValue] = useState(0);
   const [resalePct, setResalePct] = useState(45); // % of purchase price retained at end
 
-  const calcMonthlyPayment = (principal, annualRate, months) => {
-    if (principal <= 0 || months <= 0) return 0;
-    const r = annualRate / 100 / 12;
-    if (r === 0) return principal / months;
-    return (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-  };
-  const evMonthlyFinance = calcMonthlyPayment(evPrice - evDownPayment, evInterestRate, evLoanTerm);
+  const evMonthlyFinance = evLoanPayment(evPrice - evDownPayment, evInterestRate, evLoanTerm);
 
   const toggleCompare = (ev) => {
     setCompareList(prev => {
@@ -74,80 +69,23 @@ const EVCalculator = ({ onExport }) => {
     });
   };
 
-  const getStats = (ev, yrs = ownYears) => {
-    const months = yrs * 12;
-    const gallonsPerYear = annualMiles / iceMPG;
-    const gasCostYear = gallonsPerYear * gasPrice;
-    // Efficiency values are EPA wall-to-wheels (MPGe ÷ 33.7), so charging losses
-    // are already included — do NOT add another loss factor.
-    const kwhPerYear = annualMiles / ev.eff;
-    const elecCostYear = kwhPerYear * elecRate;
-
-    const currentMonthlyLoan = currentCarStatus === 'loan' ? currentCarPayment : 0;
-    const currentMonthlyTotal = currentMonthlyLoan + (gasCostYear / 12) + (iceMaintCost / 12) + currentInsurance;
-
-    let evMonthlyPayment = 0;
-    if (evPurchaseMethod === 'finance') evMonthlyPayment = evMonthlyFinance;
-    else if (evPurchaseMethod === 'lease') evMonthlyPayment = evLeasePayment;
-    const evMonthlyTotal = evMonthlyPayment + (elecCostYear / 12) + (evMaintCost / 12) + evInsurance + (evRegFee / 12);
-
-    const currentCarLoanMonths = currentCarStatus === 'loan' ? Math.min(currentCarMonthsLeft, months) : 0;
-    const totalCurrentLoan = currentMonthlyLoan * currentCarLoanMonths;
-    const totalIceCost = (gasCostYear + iceMaintCost) * yrs + totalCurrentLoan + (currentInsurance * 12 * yrs);
-
-    let totalEvPayments = 0;
-    let resaleCredit = 0;
-    if (evPurchaseMethod === 'finance') {
-      totalEvPayments = evMonthlyFinance * Math.min(evLoanTerm, months) + evDownPayment;
-      resaleCredit = evPrice * (resalePct / 100);
-    } else if (evPurchaseMethod === 'lease') {
-      // A lease doesn't stop costing money when the term ends — assume renewal
-      totalEvPayments = evLeasePayment * months + evLeaseDueAtSigning * Math.max(1, months / Math.max(1, evLeaseTerm));
-    } else {
-      totalEvPayments = evPrice;
-      resaleCredit = evPrice * (resalePct / 100);
-    }
-    const totalEvCost = (elecCostYear + evMaintCost + evRegFee) * yrs + totalEvPayments + (evInsurance * 12 * yrs) - tradeInValue - resaleCredit;
-
-    const totalSavings = totalIceCost - totalEvCost;
-
-    // Per-mile + emissions
-    const gasCPM = (gasPrice / iceMPG) * 100;
-    const evCPM = (elecRate / ev.eff) * 100;
-    const co2TonsYear = (gallonsPerYear * 8.887) / 1000; // kg CO2 per gallon burned
-    // CA grid ≈ 0.24 kg/kWh; at-home solar charging ≈ 0
-    const evCo2TonsYear = (kwhPerYear * (elecRate <= 0.10 ? 0 : 0.24)) / 1000;
-    const co2Avoided = Math.max(0, co2TonsYear - evCo2TonsYear);
-
-    // Monthly cumulative series for the break-even chart
-    const cumulative = [];
-    let ice = 0, evc = evPurchaseMethod === 'finance' ? evDownPayment : evPurchaseMethod === 'lease' ? evLeaseDueAtSigning : evPrice;
-    evc -= tradeInValue;
-    let breakEvenMonth = null;
-    for (let m = 1; m <= months; m++) {
-      ice += gasCostYear / 12 + iceMaintCost / 12 + currentInsurance + (currentCarStatus === 'loan' && m <= currentCarMonthsLeft ? currentCarPayment : 0);
-      evc += elecCostYear / 12 + evMaintCost / 12 + evInsurance + evRegFee / 12;
-      if (evPurchaseMethod === 'finance' && m <= evLoanTerm) evc += evMonthlyFinance;
-      if (evPurchaseMethod === 'lease') { evc += evLeasePayment; if (m > evLeaseTerm && m % evLeaseTerm === 1) evc += evLeaseDueAtSigning; }
-      if (m % 3 === 0 || m === months) cumulative.push({ month: m, ice: Math.round(ice), ev: Math.round(evc) });
-      if (breakEvenMonth === null && evc < ice) breakEvenMonth = m;
-    }
-
-    return { totalIceCost, totalEvCost, totalSavings, gasCostYear, elecCostYear, currentMonthlyTotal, evMonthlyTotal, evMonthlyPayment, gasCPM, evCPM, co2Avoided, cumulative, breakEvenMonth, resaleCredit };
-  };
+  // All math lives in engine/ev.js — one source of truth for totals, the
+  // break-even series, and the stacked-bar buckets alike.
+  const getStats = (ev, yrs = ownYears) => computeEvStats({
+    ev, years: yrs, annualMiles, gasPrice, iceMPG, elecRate, iceMaintCost, evMaintCost,
+    currentCarStatus, currentCarPayment, currentCarMonthsLeft, currentInsurance,
+    evPurchaseMethod, evPrice, evDownPayment, evLoanTerm, evInterestRate,
+    evLeasePayment, evLeaseTerm, evLeaseDueAtSigning, evInsurance, evRegFee,
+    tradeInValue, resalePct,
+  });
 
   const stats = useMemo(() => {
     const s = getStats(selectedEV);
     const mo = ownYears * 12;
-    const currentLoanTot = currentCarStatus === 'loan' ? currentCarPayment * Math.min(currentCarMonthsLeft, mo) : 0;
-    let evPaymentsTot = 0;
-    if (evPurchaseMethod === 'finance') evPaymentsTot = evMonthlyFinance * Math.min(evLoanTerm, mo) + evDownPayment;
-    else if (evPurchaseMethod === 'lease') evPaymentsTot = evLeasePayment * mo + evLeaseDueAtSigning * Math.max(1, mo / Math.max(1, evLeaseTerm));
-    else evPaymentsTot = evPrice;
     return {
       ...s, chartData: [
-        { name: 'Current Car', fuel: s.gasCostYear * ownYears, maintenance: iceMaintCost * ownYears, payment: currentLoanTot, insurance: currentInsurance * mo },
-        { name: selectedEV.name, fuel: s.elecCostYear * ownYears, maintenance: (evMaintCost + evRegFee) * ownYears, payment: Math.max(0, evPaymentsTot - tradeInValue - s.resaleCredit), insurance: evInsurance * mo },
+        { name: 'Current Car', fuel: s.gasCostYear * ownYears, maintenance: iceMaintCost * ownYears, payment: s.totalCurrentLoan, insurance: currentInsurance * mo },
+        { name: selectedEV.name, fuel: s.elecCostYear * ownYears, maintenance: (evMaintCost + evRegFee) * ownYears, payment: Math.max(0, s.totalEvPayments - tradeInValue - s.resaleCredit), insurance: evInsurance * mo },
       ]
     };
   }, [selectedEV, annualMiles, gasPrice, iceMPG, elecRate, iceMaintCost, evMaintCost, currentCarStatus, currentCarPayment, currentCarMonthsLeft, currentInsurance, evPurchaseMethod, evPrice, evDownPayment, evLoanTerm, evInterestRate, evLeasePayment, evLeaseTerm, evLeaseDueAtSigning, evInsurance, evMonthlyFinance, ownYears, evRegFee, tradeInValue, resalePct]);
@@ -308,6 +246,7 @@ const EVCalculator = ({ onExport }) => {
               <InputField label="Down Payment" value={evDownPayment} onChange={setEvDownPayment} unit="$" step="500" />
               <div className="grid grid-cols-2 gap-3"><InputField label="Loan Term" value={evLoanTerm} onChange={setEvLoanTerm} unit="mo" step="12" /><InputField label="Interest Rate" value={evInterestRate} onChange={setEvInterestRate} unit="%" step="0.25" /></div>
               <div className="mt-2 p-3 bg-violet-500/10 rounded-lg border border-violet-500/20"><div className="flex justify-between text-sm"><span className="text-violet-300">Monthly Payment</span><span className="font-bold text-violet-400">${Math.round(evMonthlyFinance)}/mo</span></div></div>
+              {stats.evLoanPayoff > 0 && <div className="mt-2 p-3 bg-slate-800/40 rounded-lg border border-slate-700/40 text-xs text-slate-400">Loan balance at year {ownYears}: <span className="font-bold text-slate-200">${Math.round(stats.evLoanPayoff).toLocaleString()}</span> — the term outlasts your ownership window, so this gets paid off from the sale and is counted in the totals.</div>}
             </>)}
             {evPurchaseMethod === 'lease' && (<>
               <InputField label="Monthly Lease" value={evLeasePayment} onChange={setEvLeasePayment} unit="$/mo" step="10" />
@@ -361,7 +300,7 @@ const EVCalculator = ({ onExport }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cost Per Mile</div><div className="text-xl font-bold"><span className="text-slate-300">{stats.gasCPM.toFixed(0)}¢</span><span className="text-slate-500 text-sm mx-1.5">gas →</span><span className="text-sky-400">{stats.evCPM.toFixed(1)}¢</span><span className="text-slate-500 text-sm ml-1">EV</span></div></Card>
             <Card className="p-4 text-center bg-emerald-500/5"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CO₂ Avoided</div><div className="text-xl font-bold text-emerald-400">{stats.co2Avoided.toFixed(1)} tons/yr</div><div className="text-[11px] text-slate-500">≈ {Math.round(stats.co2Avoided * 1000 / 21)} trees planted</div></Card>
-            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cash-Flow Break Even</div><div className="text-xl font-bold text-amber-400">{stats.breakEvenMonth ? `${Math.floor(stats.breakEvenMonth / 12)}y ${stats.breakEvenMonth % 12}m` : 'Beyond ' + ownYears + ' yrs'}</div><div className="text-[11px] text-slate-500">before resale credit</div></Card>
+            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cash-Flow Break Even</div><div className="text-xl font-bold text-amber-400">{stats.breakEvenMonth ? `${Math.floor(stats.breakEvenMonth / 12)}y ${stats.breakEvenMonth % 12}m` : 'Beyond ' + ownYears + ' yrs'}</div><div className="text-[11px] text-slate-500">before end-of-ownership settlement</div></Card>
           </div>
 
           {/* Monthly Cost Comparison */}
