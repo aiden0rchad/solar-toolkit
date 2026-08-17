@@ -116,7 +116,7 @@ const App = () => {
       </div>
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-8 mt-14 lg:mt-0 print:m-0 print:p-0">
-        {activeTool.tier === 'pro' && !isPro
+        {(activeTool.tier === 'pro' && !isPro) || !activeTool.component
           ? <ProLockCard tool={activeTool} />
           : <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" /></div>}>
               <ActiveComponent {...activeProps} />
