@@ -8,6 +8,10 @@ Free solar, battery, and EV calculators that run entirely in your browser.
 
 Most solar calculators online are lead generators. They exist to make solar look good so you'll leave your phone number. This one is just the math. Sometimes the math says yes, sometimes it says keep your money, and I think a calculator should be fine with either answer.
 
+If this tool helps you, please consider donating. I'm a university student and the job market is really bad right now, so every bit genuinely helps.
+
+<a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50" width="180"></a>
+
 ## Start with your question
 
 - [Is solar worth it for me?](https://aiden0rchad.github.io/solar-toolkit/#/simple-roi) Type in your monthly bill and get payback years, your new bill, and 25 year savings.
