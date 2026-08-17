@@ -1,60 +1,76 @@
+import { useId } from 'react';
 import { Battery, Info, Sun } from 'lucide-react';
 
 // --- SHARED COMPONENTS ---
 
 export const Card = ({ children, className = "" }) => (
-  <div className={`glass-card rounded-2xl overflow-hidden ${className}`}>
+  <div className={`bg-surface border border-line rounded-lg overflow-hidden ${className}`}>
     {children}
   </div>
 );
 
-export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1", tooltip, min = 0, disabled = false, readOnly = false }) => (
-  <div className={`mb-4 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-    <div className="flex items-center justify-between mb-1">
-      <label className="text-sm font-medium text-slate-300 flex items-center gap-1">
+export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1", tooltip, min = 0, disabled = false, readOnly = false }) => {
+  // Generated id ties the label to the input — without it every numeric field in the
+  // app is announced as an unlabelled spin button.
+  const id = useId();
+  return (
+    <div className={`mb-4 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <label htmlFor={id} className="mb-1 flex items-center gap-1 text-xs font-medium text-ink-2">
         {label}
         {tooltip && (
-          <div className="group relative">
-            <Info size={14} className="text-slate-400 cursor-help" />
-            <div className="absolute left-full ml-2 w-48 p-2 bg-slate-900 text-slate-200 text-xs rounded-lg z-50 hidden group-hover:block top-1/2 -translate-y-1/2 border border-slate-700 shadow-xl">
+          <span className="group relative inline-flex">
+            <Info size={13} className="text-ink-3 cursor-help" />
+            <span className="absolute left-full top-1/2 z-50 ml-2 hidden w-48 -translate-y-1/2 rounded-md border border-line bg-surface p-2 text-xs font-normal leading-relaxed text-ink-2 group-hover:block">
               {tooltip}
-            </div>
-          </div>
+            </span>
+          </span>
         )}
       </label>
-      <span className="text-xs text-slate-400 font-mono">{unit}</span>
+      <div className="relative">
+        <input
+          id={id}
+          type="number"
+          value={isNaN(value) ? '' : value}
+          onChange={(e) => {
+            if (!readOnly) {
+              const val = e.target.value;
+              onChange(val === '' ? NaN : parseFloat(val));
+            }
+          }}
+          onBlur={onBlur}
+          min={min}
+          disabled={disabled || readOnly}
+          readOnly={readOnly}
+          style={unit ? { paddingRight: `${unit.length * 0.5 + 1.25}rem` } : undefined}
+          className={`tnum h-9 w-full rounded-md border border-line bg-field px-3 text-sm text-ink hover:border-baseline [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${readOnly ? 'cursor-not-allowed text-ink-3' : ''}`}
+          step={step}
+        />
+        {unit && (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-3">
+            {unit}
+          </span>
+        )}
+      </div>
     </div>
-    <input
-      type="number"
-      value={isNaN(value) ? '' : value}
-      onChange={(e) => {
-        if (!readOnly) {
-          const val = e.target.value;
-          onChange(val === '' ? NaN : parseFloat(val));
-        }
-      }}
-      onBlur={onBlur}
-      min={min}
-      disabled={disabled || readOnly}
-      readOnly={readOnly}
-      className={`w-full px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 font-medium transition-all ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-      step={step}
-    />
-  </div>
-);
+  );
+};
 
 export const ProposalSelector = ({ mode, setMode }) => (
-  <div className="flex bg-slate-800/50 p-1 rounded-xl mb-6">
+  <div className="mb-6 flex gap-1 rounded-lg bg-field p-1">
     <button
       onClick={() => setMode('new')}
-      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'new' ? 'bg-sky-500/20 text-sky-400 shadow-lg shadow-sky-500/10' : 'text-slate-400 hover:text-slate-200'
+      className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-[13px] font-medium ${mode === 'new'
+        ? 'border-line bg-surface text-ink'
+        : 'border-transparent text-ink-3 hover:text-ink-2'
         }`}
     >
       <Sun size={16} /> New Solar + Battery
     </button>
     <button
       onClick={() => setMode('retrofit')}
-      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'retrofit' ? 'bg-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'text-slate-400 hover:text-slate-200'
+      className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-[13px] font-medium ${mode === 'retrofit'
+        ? 'border-line bg-surface text-ink'
+        : 'border-transparent text-ink-3 hover:text-ink-2'
         }`}
     >
       <Battery size={16} /> Add Battery to Solar
@@ -65,9 +81,9 @@ export const ProposalSelector = ({ mode, setMode }) => (
 export const ChartTab = ({ active, onClick, label }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${active
-      ? 'bg-sky-500/20 text-sky-400 shadow-lg shadow-sky-500/10'
-      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+    className={`rounded-md border px-3 py-1.5 text-[13px] font-medium ${active
+      ? 'border-line bg-surface text-ink'
+      : 'border-transparent text-ink-3 hover:text-ink-2'
       }`}
   >
     {label}

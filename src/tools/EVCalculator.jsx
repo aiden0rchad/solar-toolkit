@@ -1,13 +1,37 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowRight, Battery, Calculator, Car, CheckCircle2, DollarSign, FileText, Home, Scale, Search, Wallet, Zap } from 'lucide-react';
+import { ArrowRight, Battery, Car, Check, DollarSign, FileText, Scale, Search, Sun, Wallet, Zap } from 'lucide-react';
 import { Card, InputField } from '../components/ui';
-import { axisStroke, darkTooltip, gridStroke } from '../components/chartTheme';
+import {
+  BASELINE, INK, INK_2, INK_3, SERIES,
+  areaProps, barChartProps, barProps, barTooltip, chartTooltip,
+  currencyTick, currencyValue, gridProps, legendProps, xAxisProps, yAxisProps,
+} from '../components/chartTheme';
 import { evDatabase } from '../data/evDatabase';
 import { computeEvStats, evLoanPayment } from '../engine/ev';
 
+// Shared control styling — a select/input and a segmented button, system-styled.
+const fieldClass = 'h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink hover:border-baseline';
+const segBase = 'rounded-md border px-3 py-1.5 text-xs font-medium';
+const seg = (active) => `${segBase} ${active
+  ? 'border-baseline bg-accent-wash text-ink'
+  : 'border-line bg-surface text-ink-2 hover:border-baseline'}`;
+
+// The four TCO buckets are cost categories, not entities — a neutral light-to-dark
+// ramp, identified by the legend. Series hues stay reserved for EV vs. gas.
+const TCO_FILLS = { payment: BASELINE, fuel: INK_3, insurance: INK_2, maintenance: INK };
+
+const chargeSources = [
+  { l: 'Home Solar', icon: Sun, r: 0.07 },
+  { l: 'Off-Peak Grid', r: 0.31 },
+  { l: 'Standard Grid', r: 0.40 },
+];
+
 // --- TOOL: EV CALCULATOR (Expanded) ---
 const EVCalculator = ({ onExport }) => {
+  // Ids so each caption is programmatically tied to the control (or button group)
+  // it names, rather than floating above it as an orphan <label>.
+  const uid = useId();
   const makes = [...new Set(evDatabase.map(ev => ev.make))].sort();
   const years = [...new Set(evDatabase.map(ev => ev.year))].sort((a, b) => b - a);
   const categories = [...new Set(evDatabase.map(ev => ev.category))].sort();
@@ -91,79 +115,92 @@ const EVCalculator = ({ onExport }) => {
   }, [selectedEV, annualMiles, gasPrice, iceMPG, elecRate, iceMaintCost, evMaintCost, currentCarStatus, currentCarPayment, currentCarMonthsLeft, currentInsurance, evPurchaseMethod, evPrice, evDownPayment, evLoanTerm, evInterestRate, evLeasePayment, evLeaseTerm, evLeaseDueAtSigning, evInsurance, evMonthlyFinance, ownYears, evRegFee, tradeInValue, resalePct]);
   const isSaving = stats.totalSavings >= 0;
 
-  const categoryColors = { Sedan: 'text-sky-400 bg-sky-500/15', SUV: 'text-emerald-400 bg-emerald-500/15', Truck: 'text-amber-400 bg-amber-500/15', Compact: 'text-violet-400 bg-violet-500/15', PHEV: 'text-orange-400 bg-orange-500/15' };
+  const specTiles = [
+    { icon: Zap, value: selectedEV.range, label: 'Miles Range' },
+    { icon: Battery, value: selectedEV.battery, label: 'kWh Battery' },
+    { icon: ArrowRight, value: selectedEV.eff, label: 'mi/kWh' },
+    { icon: DollarSign, value: `$${Math.round(stats.elecCostYear)}`, label: 'Annual Fuel' },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn">
+    <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Car className="text-sky-400" /> EV vs. Gas Calculator</h2>
-        <p className="text-slate-400">See whether an EV would cost you less each month and over five years. Compare {evDatabase.length} models from {makes.length} manufacturers.</p>
+        <h2 className="flex items-center gap-2 text-[22px] font-semibold text-ink"><Car size={20} className="text-ink-2" /> EV vs. Gas Calculator</h2>
+        <p className="mt-1 text-sm text-ink-2">See whether an EV would cost you less each month and over five years. Compare {evDatabase.length} models from {makes.length} manufacturers.</p>
       </div>
 
       {/* Filters */}
-      <Card className="p-5 mb-6">
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Search</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input type="text" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm font-medium" />
-            </div>
+      <div className="mb-6 flex flex-wrap items-end gap-3">
+        <div className="min-w-[200px] flex-1">
+          <label htmlFor={`${uid}-search`} className="mb-1 block text-xs font-medium text-ink-2">Search</label>
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+            <input id={`${uid}-search`} type="text" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`${fieldClass} pl-9 placeholder:text-ink-3`} />
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Make</label>
-            <select value={filterMake} onChange={(e) => setFilterMake(e.target.value)} className="px-3 py-2.5 rounded-xl text-sm font-medium min-w-[140px]">
-              <option value="All">All Makes</option>
-              {makes.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Year</label>
-            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-3 py-2.5 rounded-xl text-sm font-medium min-w-[110px]">
-              <option value="All">All Years</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Type</label>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2.5 rounded-xl text-sm font-medium min-w-[120px]">
-              <option value="All">All Types</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <button onClick={() => { setCompareMode(!compareMode); if (compareMode) setCompareList([]); }}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${compareMode ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : 'bg-slate-700/40 text-slate-400 hover:bg-slate-700/60'}`}>
-            <Scale size={16} className="inline mr-1.5" />{compareMode ? `Compare (${compareList.length}/3)` : 'Compare'}
-          </button>
         </div>
-      </Card>
+        <div>
+          <label htmlFor={`${uid}-make`} className="mb-1 block text-xs font-medium text-ink-2">Make</label>
+          <select id={`${uid}-make`} value={filterMake} onChange={(e) => setFilterMake(e.target.value)} className={`${fieldClass} min-w-[140px]`}>
+            <option value="All">All Makes</option>
+            {makes.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${uid}-year`} className="mb-1 block text-xs font-medium text-ink-2">Year</label>
+          <select id={`${uid}-year`} value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${fieldClass} min-w-[110px]`}>
+            <option value="All">All Years</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${uid}-type`} className="mb-1 block text-xs font-medium text-ink-2">Type</label>
+          <select id={`${uid}-type`} value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={`${fieldClass} min-w-[120px]`}>
+            <option value="All">All Types</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <button type="button" onClick={() => { setCompareMode(!compareMode); if (compareMode) setCompareList([]); }}
+          className={`h-9 rounded-md border px-3 text-[13px] font-medium ${compareMode
+            ? 'border-baseline bg-accent-wash text-ink'
+            : 'border-line bg-surface text-ink-2 hover:border-baseline'}`}>
+          <Scale size={16} className="inline mr-1.5" />{compareMode ? `Compare (${compareList.length}/3)` : 'Compare'}
+        </button>
+      </div>
 
       {/* Compare View */}
       {compareMode && compareList.length >= 2 && (
-        <div className="mb-6 animate-slideUp">
-          <h3 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2"><Scale className="text-violet-400" size={20} /> Side-by-Side Comparison</h3>
+        <div className="mb-6">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-ink"><Scale className="text-ink-2" size={16} /> Side-by-Side Comparison</h3>
           <div className={`grid gap-4 ${compareList.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
             {compareList.map(ev => {
               const s = getStats(ev);
               const saving = s.totalSavings >= 0;
+              const rows = [
+                ['Range', `${ev.range} mi`],
+                ['Battery', `${ev.battery} kWh`],
+                ['Efficiency', `${ev.eff} mi/kWh`],
+                ['Annual Fuel', `$${Math.round(s.elecCostYear).toLocaleString()}`],
+              ];
               return (
-                <Card key={ev.id} className="p-5 border border-violet-500/20">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-bold text-slate-100">{ev.name}</h4>
-                      <p className="text-xs text-slate-400">{ev.year} {ev.trim}</p>
+                <Card key={ev.id} className="p-5">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="truncate text-sm font-semibold text-ink">{ev.name}</h4>
+                      <p className="text-xs text-ink-3">{ev.year} {ev.trim}</p>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${categoryColors[ev.category] || 'text-slate-400 bg-slate-700/40'}`}>{ev.category}</span>
+                    <span className="shrink-0 text-[11px] text-ink-3">{ev.category}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-slate-800/50 p-3 rounded-xl"><p className="text-xs text-slate-500 mb-1">Range</p><p className="font-bold text-slate-200">{ev.range} mi</p></div>
-                    <div className="bg-slate-800/50 p-3 rounded-xl"><p className="text-xs text-slate-500 mb-1">Battery</p><p className="font-bold text-slate-200">{ev.battery} kWh</p></div>
-                    <div className="bg-slate-800/50 p-3 rounded-xl"><p className="text-xs text-slate-500 mb-1">Efficiency</p><p className="font-bold text-slate-200">{ev.eff} mi/kWh</p></div>
-                    <div className="bg-slate-800/50 p-3 rounded-xl"><p className="text-xs text-slate-500 mb-1">Annual Fuel</p><p className="font-bold text-sky-400">${Math.round(s.elecCostYear).toLocaleString()}</p></div>
-                  </div>
-                  <div className={`p-3 rounded-xl text-center ${saving ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                    <p className={`text-xs font-bold uppercase mb-1 ${saving ? 'text-emerald-400' : 'text-red-400'}`}>{ownYears}-Year {saving ? 'Savings' : 'Cost'}</p>
-                    <p className={`text-2xl font-black ${saving ? 'text-emerald-400' : 'text-red-400'}`}>${Math.round(Math.abs(s.totalSavings)).toLocaleString()}</p>
+                  <dl className="mb-4 border-t border-line">
+                    {rows.map(([label, value]) => (
+                      <div key={label} className="flex items-baseline justify-between gap-3 border-b border-line py-2">
+                        <dt className="text-xs text-ink-2">{label}</dt>
+                        <dd className="tnum text-[13px] font-medium text-ink">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div>
+                    <p className="text-xs font-medium text-ink-2">{ownYears}-Year {saving ? 'Savings' : 'Cost'}</p>
+                    <p className="mt-0.5 text-2xl font-semibold text-ink">${Math.round(Math.abs(s.totalSavings)).toLocaleString()}</p>
                   </div>
                 </Card>
               );
@@ -176,77 +213,81 @@ const EVCalculator = ({ onExport }) => {
         {/* Vehicle List + Settings */}
         <div className="lg:col-span-5 space-y-6">
           <Card className="p-5">
-            <h3 className="font-bold text-lg mb-3 text-slate-200 flex justify-between items-center">
-              <span>Vehicles <span className="text-sm text-slate-400 font-medium">({filteredEVs.length})</span></span>
-            </h3>
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            <h3 className="mb-2 text-sm font-semibold text-ink">Vehicles <span className="font-normal text-ink-3">({filteredEVs.length})</span></h3>
+            <div className="max-h-[420px] overflow-y-auto border-t border-line">
               {filteredEVs.map(ev => {
                 const isSelected = selectedEV.id === ev.id;
                 const inCompare = compareList.find(e => e.id === ev.id);
+                const highlighted = compareMode ? !!inCompare : isSelected;
                 return (
-                  <div key={ev.id}
+                  <button key={ev.id} type="button"
                     onClick={() => { if (compareMode) toggleCompare(ev); else setSelectedEV(ev); }}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${isSelected && !compareMode ? 'border-sky-500/40 bg-sky-500/10' :
-                      inCompare ? 'border-violet-500/40 bg-violet-500/10' :
-                        'border-slate-700/30 hover:border-slate-600 hover:bg-slate-800/50'}`}>
-                    <div className="flex-1 min-w-0">
+                    className={`flex w-full items-center justify-between gap-3 border-b px-2 py-2.5 text-left ${highlighted
+                      ? 'border-baseline bg-accent-wash'
+                      : 'border-line hover:bg-field'}`}>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className={`font-semibold text-sm truncate ${isSelected && !compareMode ? 'text-sky-300' : inCompare ? 'text-violet-300' : 'text-slate-200'}`}>{ev.name}</p>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${categoryColors[ev.category] || 'text-slate-400 bg-slate-700/40'}`}>{ev.category}</span>
+                        <p className="truncate text-[13px] font-medium text-ink">{ev.name}</p>
+                        <span className="shrink-0 text-[11px] text-ink-3">{ev.category}</span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">{ev.year} · {ev.trim} · {ev.range} mi · {ev.eff} mi/kWh</p>
+                      <p className="tnum mt-0.5 truncate text-xs text-ink-3">{ev.year} · {ev.trim} · {ev.range} mi · {ev.eff} mi/kWh</p>
                     </div>
                     {compareMode && (
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${inCompare ? 'border-violet-400 bg-violet-500' : 'border-slate-600'}`}>
-                        {inCompare && <CheckCircle2 className="w-3 h-3 text-white" />}
-                      </div>
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${inCompare ? 'border-baseline' : 'border-line'}`}>
+                        {inCompare && <Check size={12} className="text-accent" />}
+                      </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
-              {filteredEVs.length === 0 && <p className="text-center text-slate-500 py-6">No vehicles match your filters.</p>}
+              {filteredEVs.length === 0 && <p className="py-6 text-center text-sm text-ink-3">No vehicles match your filters.</p>}
             </div>
           </Card>
           <Card className="p-5">
-            <h3 className="font-bold text-lg mb-4 text-slate-200">Driving & Costs</h3>
-            <div className="mb-4"><label className="text-sm font-medium text-slate-300 block mb-2">Current Car MPG</label>
-              <div className="flex gap-2 mb-2">{gasCarPresets.map(preset => (
-                <button key={preset.label} onClick={() => setIceMPG(preset.mpg)} className={`flex-1 px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${iceMPG === preset.mpg ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{preset.label} ({preset.mpg})</button>
+            <h3 className="mb-4 text-sm font-semibold text-ink">Driving & Costs</h3>
+            <div className="mb-4"><span id={`${uid}-mpg`} className="mb-2 block text-xs font-medium text-ink-2">Current Car MPG</span>
+              <div role="group" aria-labelledby={`${uid}-mpg`} className="flex gap-2">{gasCarPresets.map(preset => (
+                <button key={preset.label} type="button" onClick={() => setIceMPG(preset.mpg)} className={`flex-1 ${seg(iceMPG === preset.mpg)}`}>{preset.label} ({preset.mpg})</button>
               ))}</div>
             </div>
             <InputField label="Annual Mileage" value={annualMiles} onChange={setAnnualMiles} unit="mi/yr" step="500" />
             <InputField label="Gas Price" value={gasPrice} onChange={setGasPrice} unit="$/gal" />
-            <div className="mb-2"><label className="text-sm font-medium text-slate-300 block mb-2">Where does the charge come from?</label>
-              <div className="flex gap-2 mb-2">{[{ l: '☀️ Home Solar', r: 0.07 }, { l: 'Off-Peak Grid', r: 0.31 }, { l: 'Standard Grid', r: 0.40 }].map(o => (
-                <button key={o.l} onClick={() => setElecRate(o.r)} className={`flex-1 px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${Math.abs(elecRate - o.r) < 0.001 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{o.l}</button>
-              ))}</div></div>
+            <div className="mb-4"><span id={`${uid}-charge`} className="mb-2 block text-xs font-medium text-ink-2">Where does the charge come from?</span>
+              <div role="group" aria-labelledby={`${uid}-charge`} className="flex gap-2">{chargeSources.map(o => {
+                const Icon = o.icon;
+                return (
+                  <button key={o.l} type="button" onClick={() => setElecRate(o.r)} className={`flex flex-1 items-center justify-center gap-1 ${seg(Math.abs(elecRate - o.r) < 0.001)}`}>
+                    {Icon && <Icon size={12} className="shrink-0" />}{o.l}
+                  </button>
+                );
+              })}</div></div>
             <InputField label="EV Charging Rate" value={elecRate} onChange={setElecRate} unit="$/kWh" step="0.01" tooltip="Home Solar ≈ your levelized cost of self-generated power (~7¢). Vehicle efficiencies are EPA wall-to-wheels, so charging losses are already counted." />
           </Card>
           <Card className="p-5">
-            <h3 className="font-bold text-lg mb-4 text-slate-200 flex items-center gap-2"><Wallet className="text-violet-400" /> Financing & Insurance</h3>
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><Wallet size={16} className="text-ink-2" /> Financing & Insurance</h3>
             {/* Current car status */}
             <div className="mb-4">
-              <label className="text-sm font-medium text-slate-300 block mb-2">Current Vehicle</label>
-              <div className="flex gap-2 mb-3">{[{ v: 'paidoff', l: 'Paid Off' }, { v: 'loan', l: 'Has Loan' }].map(o => (
-                <button key={o.v} onClick={() => setCurrentCarStatus(o.v)} className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${currentCarStatus === o.v ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{o.l}</button>
+              <span id={`${uid}-current-vehicle`} className="mb-2 block text-xs font-medium text-ink-2">Current Vehicle</span>
+              <div role="group" aria-labelledby={`${uid}-current-vehicle`} className="mb-3 flex gap-2">{[{ v: 'paidoff', l: 'Paid Off' }, { v: 'loan', l: 'Has Loan' }].map(o => (
+                <button key={o.v} type="button" onClick={() => setCurrentCarStatus(o.v)} className={`flex-1 ${seg(currentCarStatus === o.v)}`}>{o.l}</button>
               ))}</div>
               {currentCarStatus === 'loan' && (<><InputField label="Monthly Car Payment" value={currentCarPayment} onChange={setCurrentCarPayment} unit="$/mo" step="10" /><InputField label="Months Remaining" value={currentCarMonthsLeft} onChange={setCurrentCarMonthsLeft} unit="mo" step="1" /></>)}
               <InputField label="Current Insurance" value={currentInsurance} onChange={setCurrentInsurance} unit="$/mo" step="5" />
             </div>
-            <div className="h-px bg-slate-700/40 my-4"></div>
+            <div className="my-4 h-px bg-line"></div>
             {/* EV purchase method */}
             <div className="mb-3">
-              <label className="text-sm font-medium text-slate-300 block mb-2">EV Purchase Method</label>
-              <div className="flex gap-2 mb-3">{[{ v: 'finance', l: 'Finance' }, { v: 'lease', l: 'Lease' }, { v: 'cash', l: 'Cash' }].map(o => (
-                <button key={o.v} onClick={() => setEvPurchaseMethod(o.v)} className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${evPurchaseMethod === o.v ? 'bg-violet-500/15 text-violet-400 border-violet-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{o.l}</button>
+              <span id={`${uid}-purchase-method`} className="mb-2 block text-xs font-medium text-ink-2">EV Purchase Method</span>
+              <div role="group" aria-labelledby={`${uid}-purchase-method`} className="mb-3 flex gap-2">{[{ v: 'finance', l: 'Finance' }, { v: 'lease', l: 'Lease' }, { v: 'cash', l: 'Cash' }].map(o => (
+                <button key={o.v} type="button" onClick={() => setEvPurchaseMethod(o.v)} className={`flex-1 ${seg(evPurchaseMethod === o.v)}`}>{o.l}</button>
               ))}</div>
             </div>
             {evPurchaseMethod === 'finance' && (<>
               <InputField label="EV Price" value={evPrice} onChange={setEvPrice} unit="$" step="500" />
               <InputField label="Down Payment" value={evDownPayment} onChange={setEvDownPayment} unit="$" step="500" />
               <div className="grid grid-cols-2 gap-3"><InputField label="Loan Term" value={evLoanTerm} onChange={setEvLoanTerm} unit="mo" step="12" /><InputField label="Interest Rate" value={evInterestRate} onChange={setEvInterestRate} unit="%" step="0.25" /></div>
-              <div className="mt-2 p-3 bg-violet-500/10 rounded-lg border border-violet-500/20"><div className="flex justify-between text-sm"><span className="text-violet-300">Monthly Payment</span><span className="font-bold text-violet-400">${Math.round(evMonthlyFinance)}/mo</span></div></div>
-              {stats.evLoanPayoff > 0 && <div className="mt-2 p-3 bg-slate-800/40 rounded-lg border border-slate-700/40 text-xs text-slate-400">Loan balance at year {ownYears}: <span className="font-bold text-slate-200">${Math.round(stats.evLoanPayoff).toLocaleString()}</span> — the term outlasts your ownership window, so this gets paid off from the sale and is counted in the totals.</div>}
+              <div className="mt-2 rounded-md bg-accent-wash px-3 py-2.5"><div className="flex justify-between text-[13px]"><span className="text-ink-2">Monthly Payment</span><span className="tnum font-semibold text-ink">${Math.round(evMonthlyFinance)}/mo</span></div></div>
+              {stats.evLoanPayoff > 0 && <div className="mt-2 rounded-md border border-line bg-field p-3 text-xs leading-relaxed text-ink-2">Loan balance at year {ownYears}: <span className="tnum font-medium text-ink">${Math.round(stats.evLoanPayoff).toLocaleString()}</span> — the term outlasts your ownership window, so this gets paid off from the sale and is counted in the totals.</div>}
             </>)}
             {evPurchaseMethod === 'lease' && (<>
               <InputField label="Monthly Lease" value={evLeasePayment} onChange={setEvLeasePayment} unit="$/mo" step="10" />
@@ -255,7 +296,7 @@ const EVCalculator = ({ onExport }) => {
             </>)}
             {evPurchaseMethod === 'cash' && (<InputField label="Purchase Price" value={evPrice} onChange={setEvPrice} unit="$" step="500" />)}
             <InputField label="EV Insurance" value={evInsurance} onChange={setEvInsurance} unit="$/mo" step="5" />
-            <div className="h-px bg-slate-700/40 my-4"></div>
+            <div className="my-4 h-px bg-line"></div>
             <InputField label="Trade-In Value (current car)" value={tradeInValue} onChange={setTradeInValue} unit="$" step="500" tooltip="What you'd get selling or trading your current car — credited against the EV." />
             {evPurchaseMethod !== 'lease' && <InputField label="EV Resale Value After Ownership" value={resalePct} onChange={setResalePct} unit="%" step="5" tooltip="The EV is still worth something when you're done — credited at the end. 40–50% at 5 years is typical." />}
             <InputField label="Annual EV Registration Fee" value={evRegFee} onChange={setEvRegFee} unit="$/yr" step="10" tooltip="Many states charge EVs a road fee since they skip gas taxes — CA's is ~$118/yr." />
@@ -265,100 +306,106 @@ const EVCalculator = ({ onExport }) => {
         {/* Results */}
         <div className="lg:col-span-7 space-y-6">
           {/* Selected EV Spec Card */}
-          <Card className="p-6 border border-sky-500/15">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-5">
+          <Card className="p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
-                <p className="text-xs font-bold text-sky-400 uppercase tracking-wider mb-1">Selected Vehicle</p>
-                <h3 className="text-xl font-bold text-slate-100">{selectedEV.name}</h3>
-                <p className="text-sm text-slate-400">{selectedEV.year} · {selectedEV.trim}</p>
+                <p className="eyebrow mb-1">Selected Vehicle</p>
+                <h3 className="text-base font-semibold text-ink">{selectedEV.name}</h3>
+                <p className="text-[13px] text-ink-2">{selectedEV.year} · {selectedEV.trim}</p>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-lg ${categoryColors[selectedEV.category]}`}>{selectedEV.category}</span>
+              <span className="text-[11px] text-ink-3">{selectedEV.category}</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-slate-800/60 p-3 rounded-xl text-center"><Zap size={16} className="text-amber-400 mx-auto mb-1" /><p className="text-lg font-bold text-slate-100">{selectedEV.range}</p><p className="text-xs text-slate-500">Miles Range</p></div>
-              <div className="bg-slate-800/60 p-3 rounded-xl text-center"><Battery size={16} className="text-emerald-400 mx-auto mb-1" /><p className="text-lg font-bold text-slate-100">{selectedEV.battery}</p><p className="text-xs text-slate-500">kWh Battery</p></div>
-              <div className="bg-slate-800/60 p-3 rounded-xl text-center"><ArrowRight size={16} className="text-sky-400 mx-auto mb-1" /><p className="text-lg font-bold text-slate-100">{selectedEV.eff}</p><p className="text-xs text-slate-500">mi/kWh</p></div>
-              <div className="bg-slate-800/60 p-3 rounded-xl text-center"><DollarSign size={16} className="text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold text-slate-100">${Math.round(stats.elecCostYear)}</p><p className="text-xs text-slate-500">Annual Fuel</p></div>
+            <div className="mt-5 grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-4">
+              {specTiles.map(tile => {
+                const Icon = tile.icon;
+                return (
+                  <div key={tile.label} className="bg-surface px-3 py-3 text-center">
+                    <Icon size={14} className="mx-auto mb-1 text-ink-3" />
+                    <p className="text-xl font-semibold text-ink">{tile.value}</p>
+                    <p className="text-[11px] text-ink-3">{tile.label}</p>
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
           {/* Ownership period */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ownership period</span>
-            {[3, 5, 8, 10].map(y => (<button key={y} onClick={() => setOwnYears(y)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${ownYears === y ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{y} yrs</button>))}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-ink-2">Ownership period</span>
+            {[3, 5, 8, 10].map(y => (<button key={y} type="button" onClick={() => setOwnYears(y)} className={seg(ownYears === y)}>{y} yrs</button>))}
           </div>
 
           {/* Savings Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className={`p-4 border text-center ${isSaving ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-              <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isSaving ? 'text-emerald-400' : 'text-red-400'}`}>{isSaving ? `${ownYears}-Year Savings` : `${ownYears}-Year Cost Increase`}</div>
-              <div className={`text-3xl font-black ${isSaving ? 'text-emerald-400' : 'text-red-400'}`}>${Math.round(Math.abs(stats.totalSavings)).toLocaleString()}</div>
+            <Card className="p-4">
+              <div className="text-xs font-medium text-ink-2">{isSaving ? `${ownYears}-Year Savings` : `${ownYears}-Year Cost Increase`}</div>
+              <div className="mt-1 text-2xl font-semibold text-ink">${Math.round(Math.abs(stats.totalSavings)).toLocaleString()}</div>
             </Card>
-            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Gas Annual Fuel</div><div className="text-2xl font-bold text-slate-300">${Math.round(stats.gasCostYear).toLocaleString()}</div></Card>
-            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">EV Annual Fuel</div><div className="text-2xl font-bold text-sky-400">${Math.round(stats.elecCostYear).toLocaleString()}</div></Card>
+            <Card className="p-4"><div className="text-xs font-medium text-ink-2">Gas Annual Fuel</div><div className="mt-1 text-2xl font-semibold text-ink">${Math.round(stats.gasCostYear).toLocaleString()}</div></Card>
+            <Card className="p-4"><div className="text-xs font-medium text-ink-2">EV Annual Fuel</div><div className="mt-1 text-2xl font-semibold text-ink">${Math.round(stats.elecCostYear).toLocaleString()}</div></Card>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cost Per Mile</div><div className="text-xl font-bold"><span className="text-slate-300">{stats.gasCPM.toFixed(0)}¢</span><span className="text-slate-500 text-sm mx-1.5">gas →</span><span className="text-sky-400">{stats.evCPM.toFixed(1)}¢</span><span className="text-slate-500 text-sm ml-1">EV</span></div></Card>
-            <Card className="p-4 text-center bg-emerald-500/5"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CO₂ Avoided</div><div className="text-xl font-bold text-emerald-400">{stats.co2Avoided.toFixed(1)} tons/yr</div><div className="text-[11px] text-slate-500">≈ {Math.round(stats.co2Avoided * 1000 / 21)} trees planted</div></Card>
-            <Card className="p-4 text-center"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cash-Flow Break Even</div><div className="text-xl font-bold text-amber-400">{stats.breakEvenMonth ? `${Math.floor(stats.breakEvenMonth / 12)}y ${stats.breakEvenMonth % 12}m` : 'Beyond ' + ownYears + ' yrs'}</div><div className="text-[11px] text-slate-500">before end-of-ownership settlement</div></Card>
+            <Card className="p-4"><div className="text-xs font-medium text-ink-2">Cost Per Mile</div><div className="mt-1 text-xl font-semibold text-ink"><span>{stats.gasCPM.toFixed(0)}¢</span><span className="mx-1.5 text-[13px] font-normal text-ink-3">gas →</span><span>{stats.evCPM.toFixed(1)}¢</span><span className="ml-1 text-[13px] font-normal text-ink-3">EV</span></div></Card>
+            <Card className="p-4"><div className="text-xs font-medium text-ink-2">CO₂ Avoided</div><div className="mt-1 text-xl font-semibold text-ink">{stats.co2Avoided.toFixed(1)} tons/yr</div><div className="text-[11px] text-ink-3">≈ {Math.round(stats.co2Avoided * 1000 / 21)} trees planted</div></Card>
+            <Card className="p-4"><div className="text-xs font-medium text-ink-2">Cash-Flow Break Even</div><div className="mt-1 text-xl font-semibold text-ink">{stats.breakEvenMonth ? `${Math.floor(stats.breakEvenMonth / 12)}y ${stats.breakEvenMonth % 12}m` : 'Beyond ' + ownYears + ' yrs'}</div><div className="text-[11px] text-ink-3">before end-of-ownership settlement</div></Card>
           </div>
 
           {/* Monthly Cost Comparison */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="p-5">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Current Car Monthly</p>
+              <p className="eyebrow mb-3">Current Car Monthly</p>
               <div className="space-y-2">
-                {currentCarStatus === 'loan' && <div className="flex justify-between text-sm"><span className="text-slate-400">Car Payment</span><span className="font-bold text-slate-200">${currentCarPayment}</span></div>}
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Gas</span><span className="font-bold text-slate-200">${Math.round(stats.gasCostYear / 12)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Maintenance</span><span className="font-bold text-slate-200">${Math.round(iceMaintCost / 12)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Insurance</span><span className="font-bold text-slate-200">${currentInsurance}</span></div>
-                <div className="pt-2 mt-2 border-t border-slate-700/50 flex justify-between"><span className="font-bold text-slate-200">Total</span><span className="text-xl font-black text-slate-100">${Math.round(stats.currentMonthlyTotal)}/mo</span></div>
+                {currentCarStatus === 'loan' && <div className="flex justify-between text-[13px]"><span className="text-ink-2">Car Payment</span><span className="tnum font-medium text-ink">${currentCarPayment}</span></div>}
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Gas</span><span className="tnum font-medium text-ink">${Math.round(stats.gasCostYear / 12)}</span></div>
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Maintenance</span><span className="tnum font-medium text-ink">${Math.round(iceMaintCost / 12)}</span></div>
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Insurance</span><span className="tnum font-medium text-ink">${currentInsurance}</span></div>
+                <div className="mt-2 flex items-baseline justify-between border-t border-line pt-2"><span className="text-sm font-medium text-ink">Total</span><span className="tnum text-xl font-semibold text-ink">${Math.round(stats.currentMonthlyTotal)}/mo</span></div>
               </div>
             </Card>
-            <Card className="p-5 border border-sky-500/15">
-              <p className="text-xs font-bold text-sky-400 uppercase tracking-wider mb-3">EV Monthly</p>
+            <Card className="p-5">
+              <p className="eyebrow mb-3">EV Monthly</p>
               <div className="space-y-2">
-                {evPurchaseMethod !== 'cash' && <div className="flex justify-between text-sm"><span className="text-slate-400">{evPurchaseMethod === 'finance' ? 'Loan' : 'Lease'}</span><span className="font-bold text-slate-200">${Math.round(stats.evMonthlyPayment)}</span></div>}
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Electricity</span><span className="font-bold text-sky-400">${Math.round(stats.elecCostYear / 12)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Maintenance</span><span className="font-bold text-slate-200">${Math.round(evMaintCost / 12)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-slate-400">Insurance</span><span className="font-bold text-slate-200">${evInsurance}</span></div>
-                <div className="pt-2 mt-2 border-t border-slate-700/50 flex justify-between"><span className="font-bold text-slate-200">Total</span><span className="text-xl font-black text-sky-400">${Math.round(stats.evMonthlyTotal)}/mo</span></div>
+                {evPurchaseMethod !== 'cash' && <div className="flex justify-between text-[13px]"><span className="text-ink-2">{evPurchaseMethod === 'finance' ? 'Loan' : 'Lease'}</span><span className="tnum font-medium text-ink">${Math.round(stats.evMonthlyPayment)}</span></div>}
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Electricity</span><span className="tnum font-medium text-ink">${Math.round(stats.elecCostYear / 12)}</span></div>
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Maintenance</span><span className="tnum font-medium text-ink">${Math.round(evMaintCost / 12)}</span></div>
+                <div className="flex justify-between text-[13px]"><span className="text-ink-2">Insurance</span><span className="tnum font-medium text-ink">${evInsurance}</span></div>
+                <div className="mt-2 flex items-baseline justify-between border-t border-line pt-2"><span className="text-sm font-medium text-ink">Total</span><span className="tnum text-xl font-semibold text-ink">${Math.round(stats.evMonthlyTotal)}/mo</span></div>
               </div>
             </Card>
           </div>
 
           {/* Chart */}
           <Card className="p-6 h-[350px]">
-            <h3 className="font-bold text-lg mb-4 text-slate-200">{ownYears}-Year Total Cost of Ownership</h3>
+            <h3 className="mb-4 text-sm font-semibold text-ink">{ownYears}-Year Total Cost of Ownership</h3>
             <ResponsiveContainer width="100%" height="85%">
-              <BarChart data={stats.chartData} layout="vertical" margin={{ left: 40 }} barSize={50}>
-                <XAxis type="number" tickFormatter={(val) => `$${val / 1000}k`} />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12, fontWeight: 'bold' }} />
-                <Tooltip cursor={{ fill: 'transparent' }} formatter={(val) => `$${val.toLocaleString()}`} />
-                <Legend />
-                <Bar dataKey="payment" name="Loan / Lease" stackId="a" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="fuel" name="Fuel / Energy" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="insurance" name="Insurance" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="maintenance" name="Maintenance" stackId="a" fill="#f59e0b" radius={[0, 6, 6, 0]} />
+              <BarChart data={stats.chartData} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }} {...barChartProps}>
+                <XAxis {...xAxisProps} type="number" tickFormatter={currencyTick} />
+                <YAxis {...yAxisProps} type="category" dataKey="name" width={130} />
+                <Tooltip {...barTooltip} formatter={currencyValue} />
+                <Legend {...legendProps} />
+                <Bar {...barProps} dataKey="payment" name="Loan / Lease" stackId="a" fill={TCO_FILLS.payment} radius={[0, 0, 0, 0]} />
+                <Bar {...barProps} dataKey="fuel" name="Fuel / Energy" stackId="a" fill={TCO_FILLS.fuel} radius={[0, 0, 0, 0]} />
+                <Bar {...barProps} dataKey="insurance" name="Insurance" stackId="a" fill={TCO_FILLS.insurance} radius={[0, 0, 0, 0]} />
+                <Bar {...barProps} dataKey="maintenance" name="Maintenance" stackId="a" fill={TCO_FILLS.maintenance} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
           <Card className="p-6 h-[320px]">
-            <h3 className="font-bold text-lg mb-1 text-slate-200">When Does the EV Pull Ahead?</h3>
-            <p className="text-xs text-slate-400 mb-3">Cumulative money spent — the EV wins where blue drops below red.</p>
+            <h3 className="mb-1 text-sm font-semibold text-ink">When Does the EV Pull Ahead?</h3>
+            <p className="mb-3 text-xs text-ink-3">Cumulative money spent — the EV wins where blue drops below orange.</p>
             <ResponsiveContainer width="100%" height="78%">
               <AreaChart data={stats.cumulative} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridStroke} />
-                <XAxis dataKey="month" stroke={axisStroke} tickFormatter={m => `${Math.round(m / 12)}y`} interval={3} />
-                <YAxis tickFormatter={v => `$${Math.round(v / 1000)}k`} stroke={axisStroke} />
-                <Tooltip {...darkTooltip} formatter={v => `$${v.toLocaleString()}`} labelFormatter={m => `Month ${m}`} />
-                <Legend />
-                <Area type="monotone" dataKey="ice" name="Keep the gas car" stroke="#ef4444" fill="none" strokeWidth={2.5} strokeDasharray="6 4" />
-                <Area type="monotone" dataKey="ev" name={selectedEV.name} stroke="#38bdf8" fill="none" strokeWidth={2.5} />
+                <CartesianGrid {...gridProps} />
+                <XAxis {...xAxisProps} dataKey="month" tickFormatter={m => `${Math.round(m / 12)}y`} interval={3} />
+                <YAxis {...yAxisProps} tickFormatter={currencyTick} />
+                <Tooltip {...chartTooltip} formatter={currencyValue} labelFormatter={m => `Month ${m}`} />
+                <Legend {...legendProps} />
+                <Area {...areaProps} type="monotone" dataKey="ice" name="Keep the gas car" stroke={SERIES.grid} fill={SERIES.grid} />
+                <Area {...areaProps} type="monotone" dataKey="ev" name={selectedEV.name} stroke={SERIES.solar} fill={SERIES.solar} />
               </AreaChart>
             </ResponsiveContainer>
           </Card>
-          <button onClick={() => onExport({ selectedEV: selectedEV.name, year: selectedEV.year, trim: selectedEV.trim, savings: Math.round(Math.abs(stats.totalSavings)), gasCostYear: Math.round(stats.gasCostYear), evCostYear: Math.round(stats.elecCostYear), currentMonthly: Math.round(stats.currentMonthlyTotal), evMonthly: Math.round(stats.evMonthlyTotal), purchaseMethod: evPurchaseMethod, years: ownYears })} className="w-full mt-4 flex items-center justify-center gap-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 px-6 py-3 rounded-xl font-bold transition-all border border-violet-500/20"><FileText size={18} /> Export to Proposal</button>
+          <button type="button" onClick={() => onExport({ selectedEV: selectedEV.name, year: selectedEV.year, trim: selectedEV.trim, savings: Math.round(Math.abs(stats.totalSavings)), gasCostYear: Math.round(stats.gasCostYear), evCostYear: Math.round(stats.elecCostYear), currentMonthly: Math.round(stats.currentMonthlyTotal), evMonthly: Math.round(stats.evMonthlyTotal), purchaseMethod: evPurchaseMethod, years: ownYears })} className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-6 py-2.5 text-sm font-medium text-ink hover:border-baseline"><FileText size={16} /> Export to Proposal</button>
         </div>
       </div>
     </div>

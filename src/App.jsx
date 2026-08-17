@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Lock, Zap } from 'lucide-react';
+import { Lock, Sun } from 'lucide-react';
 import ProLockCard from './components/ProLockCard';
 import ProUpsellModal from './components/ProUpsellModal';
 import { useEntitlement } from './entitlement/useEntitlement';
@@ -15,11 +15,13 @@ const EXPORT_SECTIONS = {
   bill: 'bill',
 };
 
-const educationClasses = {
-  nem1: ['bg-sky-500/10 text-sky-400', 'text-slate-400 hover:bg-slate-800/30'],
-  nem2: ['bg-orange-500/10 text-orange-400', 'text-slate-400 hover:bg-slate-800/30'],
-  nem3: ['bg-red-500/10 text-red-400', 'text-slate-400 hover:bg-slate-800/30'],
-};
+// One nav treatment for every item — main tools and NEM education alike.
+// Active carries a 2px accent left rule; inactive keeps a transparent rule of the
+// same width so nothing shifts on selection.
+const navItemClass = (isActive) => `w-full flex items-center gap-2.5 border-l-2 rounded-r-md px-3 py-2 text-[13px] font-medium ${isActive
+  ? 'border-accent bg-accent-wash text-ink'
+  : 'border-transparent text-ink-2 hover:bg-field'
+  }`;
 
 const viewFromHash = () => {
   const id = window.location.hash.replace(/^#\/?/, '');
@@ -87,38 +89,37 @@ const App = () => {
   const educationTools = TOOLS.filter(tool => tool.section === 'education');
 
   return (
-    <div className="min-h-screen font-sans text-slate-200 flex" style={{ background: 'var(--bg-primary)' }}>
+    <div className="min-h-screen font-sans bg-paper text-ink-2 flex">
       {/* Sidebar Navigation */}
-      <div className="w-64 h-screen overflow-y-auto flex-shrink-0 hidden lg:block print:hidden" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)', borderRight: '1px solid rgba(148,163,184,0.08)' }}>
+      <div className="w-64 h-screen overflow-y-auto flex-shrink-0 hidden lg:block print:hidden bg-paper border-r border-line">
         <div className="p-6">
-          <h1 className="text-xl font-black text-slate-100 flex items-center gap-2"><Zap className="text-amber-400 fill-amber-400" /> SolarPro</h1>
-          <p className="text-xs text-slate-400 mt-1 font-medium uppercase tracking-wider">Consultant Toolkit</p>
+          <h1 className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Sun size={16} strokeWidth={1.5} className="text-accent" /> SolarPro Toolkit</h1>
         </div>
-        <nav className="mt-2 px-4 space-y-1">
+        <nav className="mt-1 px-3 space-y-0.5">
           {mainTools.map(tool => {
             const Icon = tool.icon;
-            return <button key={tool.id} onClick={() => setView(tool.id)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${view === tool.id ? 'bg-sky-500/15 text-sky-400 shadow-lg shadow-sky-500/10' : 'text-slate-400 hover:bg-slate-700/40'}`}><Icon size={18} /> <span className="flex-1 text-left">{tool.navLabel}</span>{tool.tier === 'pro' && <Lock size={13} className="text-amber-400" aria-label="Pro tool" />}</button>;
+            return <button key={tool.id} onClick={() => setView(tool.id)} className={navItemClass(view === tool.id)}><Icon size={16} strokeWidth={1.5} /> <span className="flex-1 text-left">{tool.navLabel}</span>{tool.tier === 'pro' && !isPro && <Lock size={13} strokeWidth={1.5} className="text-ink-3" aria-label="Pro tool" />}</button>;
           })}
-          <div className="pt-4 pb-2 px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">NEM Education</div>
+          <div className="eyebrow px-3 pt-5 pb-2">NEM Education</div>
           {educationTools.map(tool => {
             const Icon = tool.icon;
-            const [activeClass, inactiveClass] = educationClasses[tool.id];
-            return <button key={tool.id} onClick={() => setView(tool.id)} className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl transition-all ${view === tool.id ? activeClass : inactiveClass}`}><Icon size={16} /> {tool.navLabel}</button>;
+            return <button key={tool.id} onClick={() => setView(tool.id)} className={navItemClass(view === tool.id)}><Icon size={16} strokeWidth={1.5} /> <span className="flex-1 text-left">{tool.navLabel}</span></button>;
           })}
         </nav>
       </div>
       {/* Mobile Nav */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center print:hidden" style={{ background: 'rgba(11,17,32,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
-        <div className="font-bold flex items-center gap-2"><Zap className="text-amber-400 fill-amber-400" size={20} /> SolarPro</div>
-        <select value={view} onChange={(e) => setView(e.target.value)} className="bg-slate-800/30 border border-slate-700/50 rounded-lg px-3 py-1 text-sm font-bold">
-          {TOOLS.map(tool => <option key={tool.id} value={tool.id}>{tool.navLabel}{tool.tier === 'pro' ? ' 🔒' : ''}</option>)}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center print:hidden bg-paper border-b border-line">
+        <div className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Sun size={16} strokeWidth={1.5} className="text-accent" /> SolarPro</div>
+        <select value={view} onChange={(e) => setView(e.target.value)} className="rounded-md border border-line bg-surface px-3 py-1 text-[13px] font-medium text-ink">
+          {/* ROI Calculator's navLabel already ends in "(Pro)" — don't stutter the suffix onto it. */}
+          {TOOLS.map(tool => <option key={tool.id} value={tool.id}>{tool.navLabel}{tool.tier === 'pro' && !isPro && !tool.navLabel.includes('(Pro)') ? ' (Pro)' : ''}</option>)}
         </select>
       </div>
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-8 mt-14 lg:mt-0 print:m-0 print:p-0">
         {(activeTool.tier === 'pro' && !isPro) || !activeTool.component
           ? <ProLockCard tool={activeTool} />
-          : <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" /></div>}>
+          : <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-[1.5px] border-line border-t-ink-3" /></div>}>
               <ActiveComponent {...activeProps} />
             </Suspense>}
       </div>

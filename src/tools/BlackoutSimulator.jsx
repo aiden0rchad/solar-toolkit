@@ -1,9 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Battery, CheckCircle2, FileText, Plus, Sun, Zap } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Battery, BatteryLow, FileText, Plus, Sun, Zap } from 'lucide-react';
 import { Card, InputField } from '../components/ui';
-import { darkTooltip } from '../components/chartTheme';
+import { SERIES, areaProps, chartTooltip, gridProps, xAxisProps, yAxisProps } from '../components/chartTheme';
 import { batteryPresets } from '../data/batteryPresets';
+
+const StatRow = ({ label, children }) => (
+  <div className="flex items-baseline justify-between gap-4">
+    <dt className="text-[13px] text-ink-2">{label}</dt>
+    <dd className="tnum text-[13px] font-medium text-ink">{children}</dd>
+  </div>
+);
 
 // --- TOOL: BLACKOUT SIMULATOR (Enhanced) ---
 const BlackoutSimulator = ({ onExport }) => {
@@ -53,44 +60,94 @@ const BlackoutSimulator = ({ onExport }) => {
   const estimatedHours = totalWatts <= 0 ? '∞' : sim.hours === null ? '96+' : String(sim.hours);
   const netDraw = Math.max(0, totalWatts - sim.avgSolarW);
   const depletionData = sim.trace;
-  const catColors = { Essential: 'text-emerald-400', Comfort: 'text-sky-400', Heavy: 'text-amber-400', Custom: 'text-violet-400' };
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn">
-      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Battery className="text-emerald-400" /> Blackout Simulator</h2><p className="text-slate-400">Choose what you want to keep running and see how long your battery lasts.</p></div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 space-y-4">
+    <div className="mx-auto max-w-7xl">
+      <div className="mb-8">
+        <h2 className="flex items-center gap-2 text-[22px] font-semibold text-ink"><Battery size={20} className="text-ink-2" /> Blackout Simulator</h2>
+        <p className="mt-1 text-sm text-ink-2">Choose what you want to keep running and see how long your battery lasts.</p>
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="space-y-4 lg:col-span-7">
           <Card className="p-5">
-            <h3 className="font-bold text-slate-200 mb-3">Battery System</h3>
-            <div className="flex flex-wrap gap-2 mb-3">{batteryPresets.map(p => (<button key={p.label} onClick={() => setBatterySize(p.kwh)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${batterySize === p.kwh ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{p.label} ({p.kwh})</button>))}</div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Battery size={16} className="text-ink-2" /> Battery System</h3>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {batteryPresets.map(p => (
+                <button
+                  key={p.label}
+                  onClick={() => setBatterySize(p.kwh)}
+                  className={`rounded-md border px-3 py-1.5 text-[13px] font-medium ${batterySize === p.kwh
+                    ? 'border-baseline bg-accent-wash text-ink'
+                    : 'border-line bg-surface text-ink-2 hover:border-baseline'
+                    }`}
+                >
+                  {p.label} (<span className="tnum">{p.kwh}</span>)
+                </button>
+              ))}
+            </div>
             <InputField label="Battery Capacity" value={batterySize} onChange={setBatterySize} unit="kWh" step="0.5" />
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/50 mt-2"><span className="text-sm font-bold text-slate-300 flex items-center gap-2"><Sun size={16} className="text-amber-400" /> Solar During Outage?</span><input type="checkbox" checked={solarRecharge} onChange={(e) => setSolarRecharge(e.target.checked)} className="w-5 h-5 rounded" /></div>
-            {solarRecharge && <InputField label="Solar System Size" value={solarOutput} onChange={setSolarOutput} unit="kW" step="0.5" />}
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-line bg-field px-3 py-2.5">
+              <span className="flex items-center gap-2 text-[13px] font-medium text-ink-2"><Sun size={16} className="text-ink-2" /> Solar During Outage?</span>
+              <input type="checkbox" checked={solarRecharge} onChange={(e) => setSolarRecharge(e.target.checked)} className="h-4 w-4" />
+            </label>
+            {solarRecharge && <div className="mt-4 -mb-4"><InputField label="Solar System Size" value={solarOutput} onChange={setSolarOutput} unit="kW" step="0.5" /></div>}
           </Card>
           <Card className="p-5">
-            <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2"><Zap className="w-5 h-5 text-amber-400" /> Active Appliances</h3>
-            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">{activeLoads.map(load => (
-              <div key={load.id} onClick={() => toggleLoad(load.id)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${load.active ? 'border-sky-500/40 bg-sky-500/10' : 'border-slate-700/50 hover:border-slate-600 hover:bg-slate-800/50'}`}>
-                <div className="flex items-center gap-3"><div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${load.active ? 'border-sky-400 bg-sky-500' : 'border-slate-600'}`}>{load.active && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}</div><div><p className={`font-semibold text-sm ${load.active ? 'text-sky-300' : 'text-slate-300'}`}>{load.name}</p><p className="text-xs text-slate-500">{load.watts}W · <span className={catColors[load.category]}>{load.category}</span></p></div></div>
-                {load.active && <span className="text-sky-400 font-bold text-xs">ON</span>}
-              </div>
-            ))}</div>
-            <div className="mt-3 pt-3 border-t border-slate-700/50 flex gap-2"><input type="text" placeholder="Name" value={customName} onChange={e => setCustomName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg text-sm" /><input type="number" placeholder="Watts" value={customWatts} onChange={e => setCustomWatts(e.target.value)} className="w-24 px-3 py-2 rounded-lg text-sm" /><button onClick={addCustom} className="px-3 py-2 bg-sky-500/20 text-sky-400 rounded-lg text-sm font-bold hover:bg-sky-500/30"><Plus size={16} /></button></div>
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink"><Zap size={16} className="text-ink-2" /> Active Appliances</h3>
+            <ul className="max-h-[320px] divide-y divide-line overflow-y-auto">
+              {activeLoads.map(load => (
+                <li key={load.id}>
+                  <label className="flex cursor-pointer items-center justify-between gap-3 py-2.5">
+                    <span className="flex items-center gap-3">
+                      <input type="checkbox" checked={load.active} onChange={() => toggleLoad(load.id)} className="h-4 w-4 shrink-0" />
+                      <span>
+                        <span className={`block text-[13px] ${load.active ? 'text-ink' : 'text-ink-2'}`}>{load.name}</span>
+                        <span className="block text-[11px] text-ink-3"><span className="tnum">{load.watts}</span>W · {load.category}</span>
+                      </span>
+                    </span>
+                    {load.active && <span className="text-[11px] text-ink-3">ON</span>}
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex gap-2 border-t border-line pt-3">
+              <input type="text" placeholder="Name" value={customName} onChange={e => setCustomName(e.target.value)} className="h-9 flex-1 rounded-md border border-line bg-field px-3 text-sm text-ink placeholder:text-ink-3 hover:border-baseline" />
+              <input type="number" placeholder="Watts" value={customWatts} onChange={e => setCustomWatts(e.target.value)} className="tnum h-9 w-24 rounded-md border border-line bg-field px-3 text-sm text-ink placeholder:text-ink-3 hover:border-baseline [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+              <button onClick={addCustom} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-ink-2 hover:border-baseline hover:text-ink"><Plus size={16} /></button>
+            </div>
           </Card>
         </div>
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass-card p-8 rounded-2xl border border-sky-500/20 animate-pulseGlow">
-            <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Estimated Runtime</p>
-            <div className="flex items-baseline gap-2"><span className="text-6xl font-black text-amber-400">{estimatedHours}</span><span className="text-2xl font-medium text-slate-400">Hours</span></div>
-            <div className="mt-6 pt-6 border-t border-slate-700/50 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Total Load</span><span className="font-bold text-slate-200">{totalWatts} W</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Battery</span><span className="font-bold text-slate-200">{batterySize} kWh</span></div>
-              {solarRecharge && <div className="flex justify-between text-sm"><span className="text-slate-400">Solar Offset (24h avg)</span><span className="font-bold text-emerald-400">~{Math.round(sim.avgSolarW)} W</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Net Draw</span><span className="font-bold text-sky-400">{Math.round(netDraw)} W</span></div>
+        <div className="space-y-4 lg:col-span-5">
+          <Card className="p-5">
+            <p className="eyebrow">Estimated Runtime</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-[32px] font-semibold leading-none text-ink">{estimatedHours}</span>
+              <span className="text-sm text-ink-2">Hours</span>
             </div>
-          </div>
-          {depletionData.length > 0 && (<Card className="p-5 h-[220px]"><h3 className="font-bold text-sm text-slate-400 mb-2">Battery Depletion</h3><ResponsiveContainer width="100%" height="85%"><AreaChart data={depletionData} margin={{ left: 0, right: 10 }}><XAxis dataKey="hour" tickFormatter={v => `${v}h`} /><YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} /><Tooltip {...darkTooltip} formatter={v => `${v}%`} labelFormatter={v => `Hour ${v}`} /><Area type="monotone" dataKey="remaining" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} strokeWidth={2} /></AreaChart></ResponsiveContainer></Card>)}
-          <button onClick={() => onExport({ batterySize, totalWatts, estimatedHours: parseFloat(estimatedHours) || 0, activeLoads: activeLoads.filter(l => l.active), solarRecharge, netDraw })} className="w-full flex items-center justify-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-6 py-3 rounded-xl font-bold transition-all border border-emerald-500/20"><FileText size={18} /> Export to Proposal</button>
+            <dl className="mt-5 space-y-2 border-t border-line pt-4">
+              <StatRow label="Total Load">{totalWatts} W</StatRow>
+              <StatRow label="Battery">{batterySize} kWh</StatRow>
+              {solarRecharge && <StatRow label="Solar Offset (24h avg)">~{Math.round(sim.avgSolarW)} W</StatRow>}
+              <StatRow label="Net Draw">{Math.round(netDraw)} W</StatRow>
+            </dl>
+          </Card>
+          {depletionData.length > 0 && (
+            <Card className="p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><BatteryLow size={16} className="text-ink-2" /> Battery Depletion</h3>
+              <div className="h-44 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={depletionData} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid {...gridProps} />
+                    <XAxis dataKey="hour" {...xAxisProps} tickFormatter={v => `${v}h`} />
+                    <YAxis {...yAxisProps} width={40} domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                    <Tooltip {...chartTooltip} formatter={v => `${v}%`} labelFormatter={v => `Hour ${v}`} />
+                    <Area type="monotone" dataKey="remaining" {...areaProps} stroke={SERIES.solar} fill={SERIES.solar} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+          <button onClick={() => onExport({ batterySize, totalWatts, estimatedHours: parseFloat(estimatedHours) || 0, activeLoads: activeLoads.filter(l => l.active), solarRecharge, netDraw })} className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-6 py-2.5 text-sm font-medium text-ink hover:border-baseline"><FileText size={16} /> Export to Proposal</button>
         </div>
       </div>
     </div>

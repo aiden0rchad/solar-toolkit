@@ -1,9 +1,91 @@
-import { AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Legend, Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { History, Presentation } from 'lucide-react';
 import { Card } from '../components/ui';
-import { axisStroke, darkTooltip, gridStroke } from '../components/chartTheme';
+import { SERIES, chartTooltip, gridProps, legendProps, lineProps, xAxisProps, yAxisProps } from '../components/chartTheme';
 
 // --- NEM EXPLAINERS (Original) ---
-export const NEM1Explainer = () => (<div className="max-w-5xl mx-auto"><div className="mb-8"><div className="flex items-center gap-3 mb-2"><div className="bg-sky-500/15 p-2 rounded-full"><History className="text-sky-400" size={24} /></div><h2 className="text-2xl font-bold text-slate-100">NEM 1.0: The Golden Era</h2></div><p className="text-slate-400">Legacy systems installed before 2017. 100% efficient grid battery.</p></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><Card className="p-6"><div className="h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={[{ hour: 'Mid', i: 0.2, e: 0.2 }, { hour: 'Noon', i: 0.2, e: 0.2 }, { hour: 'Eve', i: 0.2, e: 0.2 }]}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke} /><XAxis dataKey="hour" /><YAxis domain={[0, 0.4]} stroke={axisStroke} /><Tooltip {...darkTooltip} /><Line type="step" dataKey="i" stroke="#ef4444" /><Line type="step" dataKey="e" stroke="#10b981" /></AreaChart></ResponsiveContainer></div></Card><div className="space-y-4"><div className="p-4 bg-sky-500/10 rounded-lg"><h3 className="font-bold text-sky-300">1-for-1 Swap</h3><p className="text-sm text-sky-400">Import and Export rates were identical.</p></div></div></div></div>);
-export const NEM2Explainer = () => (<div className="max-w-5xl mx-auto"><div className="mb-8"><div className="flex items-center gap-3 mb-2"><div className="bg-orange-500/15 p-2 rounded-full"><History className="text-orange-400" size={24} /></div><h2 className="text-2xl font-bold text-slate-100">NEM 2.0: The Transition</h2></div><p className="text-slate-400">2017-2023. Introduced Time-of-Use and NBCs.</p></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><Card className="p-6"><div className="h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={[{ hour: 'Mid', i: 0.35, e: 0.32 }, { hour: '4PM', i: 0.50, e: 0.47 }, { hour: '9PM', i: 0.35, e: 0.32 }]}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke} /><XAxis dataKey="hour" /><YAxis domain={[0, 0.6]} stroke={axisStroke} /><Tooltip {...darkTooltip} /><Line type="monotone" dataKey="i" stroke="#ef4444" /><Line type="monotone" dataKey="e" stroke="#10b981" /></AreaChart></ResponsiveContainer></div></Card><div className="space-y-4"><div className="p-4 bg-orange-500/10 rounded-lg"><h3 className="font-bold text-orange-300">TOU + NBCs</h3><p className="text-sm text-orange-400">Small non-bypassable charges (~2¢) added to imports.</p></div></div></div></div>);
-export const NEM3Explainer = () => (<div className="max-w-5xl mx-auto"><div className="mb-8"><div className="flex items-center gap-3 mb-2"><div className="bg-red-500/15 p-2 rounded-full"><Presentation className="text-red-400" size={24} /></div><h2 className="text-2xl font-bold text-slate-100">NEM 3.0: The New Reality</h2></div><p className="text-slate-400">Current policy. The "Buy High, Sell Low" problem.</p></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><Card className="p-6"><div className="h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={[{ hour: 'Mid', i: 0.35, e: 0.04 }, { hour: 'Noon', i: 0.35, e: 0.03 }, { hour: 'Eve', i: 0.58, e: 0.06 }]}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke} /><XAxis dataKey="hour" /><YAxis domain={[0, 0.7]} stroke={axisStroke} /><Tooltip {...darkTooltip} /><Line type="step" dataKey="i" stroke="#ef4444" /><Line type="step" dataKey="e" stroke="#10b981" /></AreaChart></ResponsiveContainer></div></Card><div className="space-y-4"><div className="p-4 bg-red-500/10 rounded-lg"><h3 className="font-bold text-red-300">75% Value Drop</h3><p className="text-sm text-red-400">Exports are worth ~4¢. Imports cost ~58¢.</p></div><div className="p-4 bg-emerald-500/10 rounded-lg"><h3 className="font-bold text-emerald-300">Battery Required</h3><p className="text-sm text-emerald-400">Store cheap solar, use it when rates are high.</p></div></div></div></div>);
+// Prose pages: one column, hairline rules, no per-era color coding. Import is always the
+// orange cost baseline, export always the blue solar series — entity-stable app-wide.
+
+const Explainer = ({ icon: Icon, title, intro, chart, notes }) => (
+  <article className="mx-auto max-w-prose">
+    <header className="mb-6">
+      <h2 className="flex items-center gap-2 text-[22px] font-semibold text-ink">
+        <Icon size={18} className="text-ink-2" aria-hidden="true" /> {title}
+      </h2>
+      <p className="mt-1 text-sm leading-relaxed text-ink-2">{intro}</p>
+    </header>
+    <Card className="p-4">
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chart.data}>
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey="hour" {...xAxisProps} />
+            <YAxis domain={chart.domain} {...yAxisProps} />
+            <Tooltip {...chartTooltip} />
+            <Legend {...legendProps} />
+            <Line type={chart.type} dataKey="i" name="Import" stroke={SERIES.grid} {...lineProps} />
+            <Line type={chart.type} dataKey="e" name="Export" stroke={SERIES.solar} {...lineProps} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+    <div className="mt-6 space-y-4">
+      {notes.map(note => (
+        <section key={note.title} className="border-t border-line pt-4">
+          <h3 className="text-sm font-semibold text-ink">{note.title}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-ink-2">{note.body}</p>
+        </section>
+      ))}
+    </div>
+  </article>
+);
+
+export const NEM1Explainer = () => (
+  <Explainer
+    icon={History}
+    title="NEM 1.0: The Golden Era"
+    intro="Legacy systems installed before 2017. 100% efficient grid battery."
+    chart={{
+      type: 'step',
+      domain: [0, 0.4],
+      data: [{ hour: 'Mid', i: 0.2, e: 0.2 }, { hour: 'Noon', i: 0.2, e: 0.2 }, { hour: 'Eve', i: 0.2, e: 0.2 }],
+    }}
+    notes={[
+      { title: '1-for-1 Swap', body: 'Import and Export rates were identical.' },
+    ]}
+  />
+);
+
+export const NEM2Explainer = () => (
+  <Explainer
+    icon={History}
+    title="NEM 2.0: The Transition"
+    intro="2017-2023. Introduced Time-of-Use and NBCs."
+    chart={{
+      type: 'monotone',
+      domain: [0, 0.6],
+      data: [{ hour: 'Mid', i: 0.35, e: 0.32 }, { hour: '4PM', i: 0.50, e: 0.47 }, { hour: '9PM', i: 0.35, e: 0.32 }],
+    }}
+    notes={[
+      { title: 'TOU + NBCs', body: 'Small non-bypassable charges (~2¢) added to imports.' },
+    ]}
+  />
+);
+
+export const NEM3Explainer = () => (
+  <Explainer
+    icon={Presentation}
+    title="NEM 3.0: The New Reality"
+    intro={'Current policy. The "Buy High, Sell Low" problem.'}
+    chart={{
+      type: 'step',
+      domain: [0, 0.7],
+      data: [{ hour: 'Mid', i: 0.35, e: 0.04 }, { hour: 'Noon', i: 0.35, e: 0.03 }, { hour: 'Eve', i: 0.58, e: 0.06 }],
+    }}
+    notes={[
+      { title: '75% Value Drop', body: 'Exports are worth ~4¢. Imports cost ~58¢.' },
+      { title: 'Battery Required', body: 'Store cheap solar, use it when rates are high.' },
+    ]}
+  />
+);
