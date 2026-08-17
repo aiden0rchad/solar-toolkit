@@ -1,4 +1,4 @@
-import { ArrowRight, Battery, Car, Lock, Sun } from 'lucide-react';
+import { ArrowRight, Battery, Car, Coffee, Lock, Sun } from 'lucide-react';
 
 const journeys = [
   { id: 'simple-roi', title: 'Is solar worth it for me?', copy: 'Start with your bill and get a plain-language savings estimate.', icon: Sun, color: 'amber' },
@@ -45,6 +45,16 @@ const HomeLanding = ({ onNavigate, tools }) => {
         ))}
       </div>
     </section>
+
+    <footer className="mt-10 border-t border-slate-700/40 pt-6 text-center" aria-label="Support this project">
+      <p className="text-sm leading-relaxed text-slate-400">
+        This toolkit is free and stays that way. If it helped you decide, consider{' '}
+        <a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-400 transition-colors hover:text-amber-300">
+          buying me a coffee <Coffee size={14} className="inline -mt-0.5" aria-hidden="true" />
+        </a>
+        {' '}&#8212; I&#8217;m a university student building this between classes.
+      </p>
+    </footer>
   </main>;
 };
 
