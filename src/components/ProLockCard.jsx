@@ -30,47 +30,55 @@ const proDetails = {
   },
 };
 
+// Faint skeleton of the tool behind the card — hairlines on paper, no blur.
 const ProMock = () => (
-  <div className="absolute inset-0 overflow-hidden rounded-3xl" aria-hidden="true">
-    <div className="absolute inset-[-2rem] grid grid-cols-[12rem_1fr] gap-5 bg-slate-950/70 p-10 blur-[7px] opacity-55">
-      <div className="space-y-3 rounded-2xl bg-slate-800/80 p-4">
-        {[70, 90, 55, 80, 65].map(width => <div key={width} className="h-3 rounded bg-slate-600" style={{ width: `${width}%` }} />)}
+  <div className="pointer-events-none absolute inset-0 overflow-hidden bg-paper" aria-hidden="true">
+    <div className="grid h-full grid-cols-[9rem_1fr] gap-6 p-8 opacity-60">
+      <div className="space-y-3">
+        {[70, 90, 55, 80, 65].map(width => (
+          <div key={width} className="h-2.5 rounded-sm bg-field" style={{ width: `${width}%` }} />
+        ))}
       </div>
-      <div className="space-y-5">
-        <div className="h-20 rounded-2xl bg-sky-500/30" />
+      <div className="space-y-4">
+        <div className="h-10 rounded-md border border-line bg-surface" />
         <div className="grid grid-cols-3 gap-3">
-          <div className="h-28 rounded-2xl bg-emerald-500/25" />
-          <div className="h-28 rounded-2xl bg-amber-500/25" />
-          <div className="h-28 rounded-2xl bg-violet-500/25" />
+          <div className="h-20 rounded-md border border-line bg-surface" />
+          <div className="h-20 rounded-md border border-line bg-surface" />
+          <div className="h-20 rounded-md border border-line bg-surface" />
         </div>
-        <div className="h-32 rounded-2xl bg-slate-700/80" />
+        <div className="h-32 rounded-md border border-line bg-surface" />
       </div>
     </div>
-    <div className="absolute inset-0 bg-slate-950/55" />
   </div>
 );
 
 const ProLockCard = ({ tool }) => {
-  const Icon = tool.icon;
   const details = proDetails[tool.id];
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-5xl items-center justify-center animate-fadeIn">
-      <section className="relative w-full overflow-hidden rounded-3xl border border-sky-400/20 p-6 shadow-2xl shadow-sky-950/30 sm:p-10">
+    <main className="mx-auto flex min-h-[70vh] max-w-5xl items-center justify-center">
+      <section className="relative w-full overflow-hidden rounded-lg border border-line p-6 sm:p-10">
         <ProMock />
-        <div className="relative mx-auto max-w-2xl rounded-2xl border border-slate-600/40 bg-slate-950/85 p-6 shadow-2xl backdrop-blur-xl sm:p-9">
-          <div className="mb-6 flex items-center gap-4">
-            <span className="rounded-2xl bg-sky-500/15 p-3 text-sky-400"><Icon size={30} aria-hidden="true" /></span>
+        <div className="relative mx-auto max-w-xl rounded-xl border border-line bg-surface p-6 sm:p-8">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-wash text-accent">
+              <Lock size={16} aria-hidden="true" />
+            </span>
             <div>
-              <div className="mb-1 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-amber-400"><Lock size={13} aria-hidden="true" /> SolarPro Pro</div>
-              <h1 className="text-2xl font-black text-slate-100 sm:text-3xl">{details.title}</h1>
+              <div className="eyebrow text-accent">SolarPro Pro</div>
+              <h1 className="mt-1 text-xl font-semibold text-ink">{details.title}</h1>
             </div>
           </div>
-          <ul className="space-y-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-            {details.bullets.map(bullet => <li key={bullet} className="flex gap-3"><Check className="mt-0.5 shrink-0 text-emerald-400" size={19} aria-hidden="true" />{bullet}</li>)}
+          <ul className="space-y-2.5">
+            {details.bullets.map(bullet => (
+              <li key={bullet} className="flex gap-2 text-[13px] leading-relaxed text-ink-2">
+                <Check size={16} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+                {bullet}
+              </li>
+            ))}
           </ul>
-          <a href={PRO_URL} className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 px-6 py-3 font-black text-slate-950 transition-colors hover:bg-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950">
-            <Lock size={17} aria-hidden="true" /> Upgrade to Pro
+          <a href={PRO_URL} className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-ink px-5 py-2.5 text-sm font-medium text-surface hover:bg-ink-2">
+            Upgrade to Pro
           </a>
         </div>
       </section>

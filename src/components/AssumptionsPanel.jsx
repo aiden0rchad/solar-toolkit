@@ -1,5 +1,12 @@
 import { ChevronDown } from 'lucide-react';
 
+const Row = ({ term, children }) => (
+  <div className="flex items-baseline justify-between gap-4 border-b border-line py-1.5">
+    <dt className="text-xs text-ink-2">{term}</dt>
+    <dd className="tnum text-xs text-ink">{children}</dd>
+  </div>
+);
+
 const AssumptionsPanel = ({
   rateEscalation,
   panelDegradation = 0.5,
@@ -10,22 +17,22 @@ const AssumptionsPanel = ({
   offPeakRate,
   blendedRate,
 }) => (
-  <details className="glass-card rounded-2xl p-5">
-    <summary className="flex cursor-pointer list-none items-center justify-between font-bold text-slate-200">
+  <details className="group border-t border-line pt-4">
+    <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink">
       Assumptions behind these numbers
-      <ChevronDown size={18} className="text-slate-400" />
+      <ChevronDown size={16} className="text-ink-3 group-open:rotate-180" />
     </summary>
-    <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-      <div><dt className="text-slate-400">Utility rate escalation</dt><dd className="font-bold text-slate-200">{rateEscalation}% / year</dd></div>
-      <div><dt className="text-slate-400">Panel degradation</dt><dd className="font-bold text-slate-200">{panelDegradation}% / year</dd></div>
-      {peakRate !== undefined && <div><dt className="text-slate-400">Peak electricity rate</dt><dd className="font-bold text-slate-200">${Number(peakRate).toFixed(3)} / kWh</dd></div>}
-      {offPeakRate !== undefined && <div><dt className="text-slate-400">Off-peak electricity rate</dt><dd className="font-bold text-slate-200">${Number(offPeakRate).toFixed(3)} / kWh</dd></div>}
-      {blendedRate !== undefined && <div><dt className="text-slate-400">Blended rate used</dt><dd className="font-bold text-slate-200">${Number(blendedRate).toFixed(3)} / kWh</dd></div>}
-      {batteryRoundTrip !== undefined && <div><dt className="text-slate-400">Battery round-trip efficiency</dt><dd className="font-bold text-slate-200">{batteryRoundTrip}%</dd></div>}
-      {batteryDegradation !== undefined && <div><dt className="text-slate-400">Battery degradation</dt><dd className="font-bold text-slate-200">{batteryDegradation}% / year</dd></div>}
-      <div><dt className="text-slate-400">Export credit</dt><dd className="font-bold text-slate-200">${Number(exportRate).toFixed(2)} / kWh</dd></div>
+    <dl className="mt-3 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+      <Row term="Utility rate escalation">{rateEscalation}% / year</Row>
+      <Row term="Panel degradation">{panelDegradation}% / year</Row>
+      {peakRate !== undefined && <Row term="Peak electricity rate">${Number(peakRate).toFixed(3)} / kWh</Row>}
+      {offPeakRate !== undefined && <Row term="Off-peak electricity rate">${Number(offPeakRate).toFixed(3)} / kWh</Row>}
+      {blendedRate !== undefined && <Row term="Blended rate used">${Number(blendedRate).toFixed(3)} / kWh</Row>}
+      {batteryRoundTrip !== undefined && <Row term="Battery round-trip efficiency">{batteryRoundTrip}%</Row>}
+      {batteryDegradation !== undefined && <Row term="Battery degradation">{batteryDegradation}% / year</Row>}
+      <Row term="Export credit">${Number(exportRate).toFixed(2)} / kWh</Row>
     </dl>
-    <p className="mt-4 border-t border-slate-700/50 pt-4 text-xs leading-relaxed text-slate-400">
+    <p className="mt-4 text-[11px] leading-relaxed text-ink-3">
       This is an estimate, not a quote or guarantee. Actual utility rates, production, usage, financing, and incentives can change your results.
     </p>
   </details>

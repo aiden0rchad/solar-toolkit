@@ -2,196 +2,157 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face { font-family: 'Inter'; src: url('./assets/fonts/inter-latin.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+/* Variable font: one @font-face, weight range 100–700.
+   Do NOT split this into per-weight rules — several single-weight rules pointing at one
+   file is what silently flattened every bold in an earlier phase. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('./assets/fonts/ibm-plex-sans-latin.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ========================================
-   SOLARPRO DARK THEME DESIGN SYSTEM
+   DAYLIGHT — DESIGN TOKENS
    ======================================== */
 
 :root {
-  --bg-primary: #0b1120;
-  --bg-secondary: #111827;
-  --bg-card: rgba(17, 24, 39, 0.7);
-  --bg-card-hover: rgba(30, 41, 59, 0.8);
-  --border-subtle: rgba(148, 163, 184, 0.12);
-  --border-glow: rgba(56, 189, 248, 0.25);
-  --accent-blue: #38bdf8;
-  --accent-emerald: #34d399;
-  --accent-amber: #fbbf24;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* surfaces */
+  --paper:   #f9f9f7;   /* page background — warm paper */
+  --surface: #ffffff;   /* cards, inputs-on-cards, chart surface */
+  --field:   #f4f3ef;   /* input backgrounds */
+  /* ink */
+  --ink:     #0b0b0b;   /* headings, values, primary text */
+  --ink-2:   #52514e;   /* body, labels, legends */
+  /* ink-3 is darker than the spec's #898781: that value measures 3.59:1 on --surface
+     and 3.17:1 on --accent-wash, so it failed the AA constraint at the 11–13px sizes it
+     is actually used at. #6f6c67 keeps the warm grey and clears 4.5:1 on every surface
+     (white 5.23, paper 4.96, field 4.71, accent-wash 4.61). Mirrored in
+     tailwind.config.js and src/components/chartTheme.js. */
+  --ink-3:   #6f6c67;   /* captions, axis text, fine print */
+  /* lines */
+  --line:       #e4e2dd;  /* UI hairlines: card borders, dividers */
+  --chart-grid: #e1e0d9;  /* chart gridlines */
+  --grid:       var(--chart-grid); /* alias */
+  --baseline:   #c3c2b7;  /* chart x-axis baseline */
+  /* accent — exactly one */
+  --accent:      #b45309;  /* links, active states, focus, brand marks */
+  --accent-wash: #f7f0e3;  /* active-nav / selected-segment background tint */
+  /* money semantics (text only, used sparingly) */
+  --good:    #006300;   /* positive deltas */
+  --bad:     #d03b3b;   /* negative deltas / cost callouts */
+  /* chart series — entity-stable app-wide; mirrors src/components/chartTheme.js */
+  --s-solar: #2a78d6;   /* blue: solar / proposed / EV / battery */
+  --s-grid:  #eb6834;   /* orange: do-nothing / utility / gas */
+  --s-3:     #1baf7a;   /* aqua: rare third series, legend required */
+  /* ink-derived one-offs — mirrored as `scrim` / `shadow-modal` in tailwind.config.js */
+  --scrim:        rgba(11,11,11,0.35);      /* modal backdrop, never blurred */
+  --shadow-modal: 0 10px 30px rgba(11,11,11,0.12); /* the one permitted shadow */
 }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background:
-    radial-gradient(1200px 800px at 12% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
-    radial-gradient(1000px 700px at 108% 112%, rgba(52, 211, 153, 0.05), transparent 60%),
-    radial-gradient(800px 500px at 85% -5%, rgba(251, 191, 36, 0.04), transparent 55%),
-    var(--bg-primary);
-  background-attachment: fixed;
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--paper);
+    color: var(--ink-2);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 120ms ease-out, color and border only — nothing moves. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"] {
+    transition: color 120ms ease-out, background-color 120ms ease-out,
+      border-color 120ms ease-out;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"] {
+    accent-color: var(--accent);
+  }
 }
 
-/* Dark scrollbar */
+@layer components {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-3);
+  }
+}
+
+/* Scrollbar — neutral light */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
+  background: #d2cfc7;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+  background: var(--baseline);
 }
 
 /* ========================================
-   ANIMATIONS
-   ======================================== */
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.15); }
-  50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.3); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-pulseGlow {
-  animation: pulseGlow 3s ease-in-out infinite;
-}
-
-/* Staggered children animation */
-.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
-.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
-.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
-
-/* ========================================
-   GLASSMORPHISM UTILITIES
-   ======================================== */
-
-.glass {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-light {
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-card {
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(148, 163, 184, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-card:hover {
-  border-color: rgba(148, 163, 184, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* ========================================
-   DARK THEME INPUT OVERRIDES
-   ======================================== */
-
-input[type="number"],
-input[type="text"],
-select {
-  background: rgba(15, 23, 42, 0.8) !important;
-  border-color: var(--border-subtle) !important;
-  color: var(--text-primary) !important;
-}
-
-input[type="number"]:focus,
-input[type="text"]:focus,
-select:focus {
-  border-color: var(--accent-blue) !important;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
-}
-
-/* Checkbox dark styling */
-input[type="checkbox"] {
-  accent-color: var(--accent-emerald);
-}
-
-/* ========================================
-   RECHARTS DARK THEME OVERRIDES
+   RECHARTS — LIGHT THEME BASELINE
+   (series/tick/tooltip specifics live in src/components/chartTheme.js)
    ======================================== */
 
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-  stroke: rgba(148, 163, 184, 0.08) !important;
+  stroke: var(--chart-grid);
 }
 
 .recharts-text {
-  fill: var(--text-secondary) !important;
+  fill: var(--ink-3);
 }
 
-.recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: rgba(15, 23, 42, 0.95) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
-  padding: 12px 16px !important;
-}
-
-.recharts-tooltip-item {
-  color: var(--text-primary) !important;
-}
-
+/* Recharts writes the series color onto each legend label as an inline style
+   (DefaultLegendContent renders `<span class="recharts-legend-item-text"
+   style="color: …">`), which beats the wrapper color set in chartTheme.js. Legend text
+   never wears a series hue — only the 8px swatch carries it — so this has to win. */
 .recharts-legend-item-text {
-  color: var(--text-secondary) !important;
+  color: var(--ink-2) !important;
 }
 
 /* ========================================
-   PRINT STYLES
+   PRINT
    ======================================== */
+
+@page {
+  margin: 0.6in;
+}
 
 @media print {
   body * {
     visibility: hidden;
   }
-  
+
   #proposal-content, #proposal-content * {
     visibility: visible;
   }
-  
+
   #proposal-content {
     position: absolute;
     left: 0;

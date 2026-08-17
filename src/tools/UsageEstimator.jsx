@@ -1,9 +1,33 @@
-import { useMemo, useState } from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Calculator, Droplets, FileText, Home } from 'lucide-react';
+import { useId, useMemo, useState } from 'react';
+import { Calculator, Droplets, FileText } from 'lucide-react';
 import { Card, InputField } from '../components/ui';
-import { darkTooltip } from '../components/chartTheme';
 import { SUN_PROFILES, annualSunHours } from '../engine/solar';
+
+// The caption names a group of buttons, not one control, so it is a labelled
+// role="group" rather than a <label> pointing at nothing.
+const SegmentedField = ({ label, options, value, onChange }) => {
+  const labelId = useId();
+  return (
+    <div className="mb-4">
+      <span id={labelId} className="mb-1 block text-xs font-medium text-ink-2">{label}</span>
+      <div role="group" aria-labelledby={labelId} className="flex gap-2">
+        {options.map(option => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-medium ${value === option
+              ? 'border-baseline bg-accent-wash text-ink'
+              : 'border-line bg-surface text-ink-2 hover:border-baseline'
+              }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // --- TOOL: USAGE ESTIMATOR (Enhanced) ---
 const UsageEstimator = ({ onExport }) => {
@@ -46,37 +70,78 @@ const UsageEstimator = ({ onExport }) => {
   }, [sqFt, occupants, hasPool, evMiles, numEVs, acUsage, homeAge, climateZone, waterHeater, utilityRate]);
 
   return (
-    <div className="max-w-5xl mx-auto animate-fadeIn">
-      <div className="mb-8"><h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Calculator className="text-sky-400" /> Usage Estimator</h2><p className="text-slate-400">Estimate your home's electricity use when you don't have a bill handy.</p></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="mx-auto max-w-5xl">
+      <header className="mb-8">
+        <h2 className="flex items-center gap-2 text-[22px] font-semibold text-ink">
+          <Calculator size={18} className="text-ink-2" /> Usage Estimator
+        </h2>
+        <p className="mt-1 text-sm text-ink-2">Estimate your home's electricity use when you don't have a bill handy.</p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="font-bold text-lg mb-4 text-slate-200">Home Details</h3>
+          <h3 className="mb-4 text-sm font-semibold text-ink">Home Details</h3>
           <InputField label="Square Footage" value={sqFt} onChange={setSqFt} unit="sqft" step="100" />
           <InputField label="Occupants" value={occupants} onChange={setOccupants} unit="ppl" step="1" />
-          <div className="mb-3"><label className="text-sm font-medium text-slate-300 block mb-1.5">Home Age</label><div className="flex gap-2">{Object.keys(ageMultiplier).map(a => (<button key={a} onClick={() => setHomeAge(a)} className={`flex-1 px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${homeAge === a ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{a}</button>))}</div></div>
-          <div className="mb-3"><label className="text-sm font-medium text-slate-300 block mb-1.5">Climate Zone</label><div className="flex gap-2">{Object.keys(climateMultiplier).map(c => (<button key={c} onClick={() => setClimateZone(c)} className={`flex-1 px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${climateZone === c ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{c}</button>))}</div></div>
-          <div className="mb-3"><label className="text-sm font-medium text-slate-300 block mb-1.5">Water Heater</label><div className="flex gap-2">{Object.keys(waterHeaterKwh).map(w => (<button key={w} onClick={() => setWaterHeater(w)} className={`flex-1 px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${waterHeater === w ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'text-slate-400 border-slate-700/50 hover:bg-slate-700/50'}`}>{w}</button>))}</div></div>
-          <div className="flex items-center justify-between mb-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/50"><span className="text-sm font-bold text-slate-300 flex items-center gap-2"><Droplets size={16} /> Pool Pump?</span><input type="checkbox" checked={hasPool} onChange={(e) => setHasPool(e.target.checked)} className="w-5 h-5 rounded" /></div>
+          <SegmentedField label="Home Age" options={Object.keys(ageMultiplier)} value={homeAge} onChange={setHomeAge} />
+          <SegmentedField label="Climate Zone" options={Object.keys(climateMultiplier)} value={climateZone} onChange={setClimateZone} />
+          <SegmentedField label="Water Heater" options={Object.keys(waterHeaterKwh)} value={waterHeater} onChange={setWaterHeater} />
+          <label className="mb-4 flex cursor-pointer items-center justify-between rounded-md border border-line px-3 py-2.5">
+            <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+              <Droplets size={16} className="text-ink-2" /> Pool Pump?
+            </span>
+            <input
+              type="checkbox"
+              checked={hasPool}
+              onChange={(e) => setHasPool(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+          </label>
           <InputField label="Daily EV Driving" value={evMiles} onChange={setEvMiles} unit="mi/day" step="5" />
           <InputField label="Number of EVs" value={numEVs} onChange={setNumEVs} unit="EVs" step="1" />
           <InputField label="AC Usage (Summer)" value={acUsage} onChange={setAcUsage} unit="hrs/day" step="1" />
           <InputField label="Utility Rate" value={utilityRate} onChange={setUtilityRate} unit="$/kWh" step="0.01" />
         </Card>
+
         <div className="space-y-6">
-          <Card className="p-6 bg-emerald-500/10 border-emerald-500/20">
-            <h3 className="text-sm font-bold text-emerald-300 uppercase tracking-wider mb-3">Estimated Usage</h3>
-            <div className="flex justify-between items-end mb-1"><span className="text-4xl font-black text-emerald-400">{estimation.dailyTotal.toFixed(1)}</span><span className="text-emerald-400 font-medium mb-1">kWh / Day</span></div>
-            <div className="text-sm text-emerald-400/60 mb-4">{estimation.monthlyKwh.toFixed(0)} kWh / Month</div>
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-emerald-500/20">
-              <div><p className="text-xs text-emerald-400/60">Est. Monthly Bill</p><p className="text-xl font-bold text-emerald-400">${estimation.monthlyBillEst.toFixed(0)}</p></div>
-              <div><p className="text-xs text-emerald-400/60">Recommended System</p><p className="text-xl font-bold text-sky-400">{estimation.recommendedSystem} kW</p><p className="text-[11px] text-slate-500 mt-0.5">winter-independent: {estimation.winterSystem} kW</p></div>
+          <Card className="p-6">
+            <h3 className="eyebrow mb-3">Estimated Usage</h3>
+            <div className="mb-1 flex items-end justify-between">
+              <span className="text-[32px] font-semibold leading-none text-ink">{estimation.dailyTotal.toFixed(1)}</span>
+              <span className="text-sm text-ink-2">kWh / Day</span>
+            </div>
+            <div className="mb-4 text-[13px] text-ink-3">{estimation.monthlyKwh.toFixed(0)} kWh / Month</div>
+            <div className="grid grid-cols-2 gap-3 border-t border-line pt-4">
+              <div className="p-3">
+                <p className="text-xs text-ink-2">Est. Monthly Bill</p>
+                <p className="mt-1 text-xl font-semibold text-ink">${estimation.monthlyBillEst.toFixed(0)}</p>
+              </div>
+              <div className="rounded-md bg-accent-wash p-3">
+                <p className="text-xs text-ink-2">Recommended System</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{estimation.recommendedSystem} kW</p>
+                <p className="mt-0.5 text-[11px] text-ink-3">winter-independent: {estimation.winterSystem} kW</p>
+              </div>
             </div>
           </Card>
-          <Card className="p-6 h-64">
-            <h3 className="font-bold text-sm text-slate-400 mb-4">Consumption Breakdown</h3>
-            <ResponsiveContainer width="100%" height="100%"><BarChart data={estimation.breakdown.filter(i => i.value > 0)} layout="vertical" margin={{ left: 40 }}><XAxis type="number" hide /><YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12 }} /><Tooltip {...darkTooltip} cursor={{ fill: 'transparent' }} /><Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} /></BarChart></ResponsiveContainer>
+
+          <Card className="p-6">
+            <h3 className="mb-2 text-sm font-semibold text-ink">Consumption Breakdown</h3>
+            <dl>
+              {estimation.breakdown.filter(i => i.value > 0).map(item => (
+                <div key={item.name} className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0 last:pb-0">
+                  <dt className="text-[13px] text-ink-2">{item.name}</dt>
+                  <dd className="tnum text-[13px] text-ink">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
           </Card>
-          <button onClick={() => onExport({ dailyKwh: estimation.dailyTotal.toFixed(1), monthlyBill: estimation.monthlyBillEst.toFixed(0), sqFt, occupants, recommendedSystem: estimation.recommendedSystem, breakdown: estimation.breakdown })} className="w-full flex items-center justify-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-6 py-3 rounded-xl font-bold transition-all border border-emerald-500/20"><FileText size={18} /> Export to Proposal</button>
+
+          <button
+            onClick={() => onExport({ dailyKwh: estimation.dailyTotal.toFixed(1), monthlyBill: estimation.monthlyBillEst.toFixed(0), sqFt, occupants, recommendedSystem: estimation.recommendedSystem, breakdown: estimation.breakdown })}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-6 py-2.5 text-sm font-medium text-ink hover:border-baseline"
+          >
+            <FileText size={16} /> Export to Proposal
+          </button>
         </div>
       </div>
     </div>
