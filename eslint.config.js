@@ -26,4 +26,19 @@ export default defineConfig([
       'no-unused-vars': ['error', { argsIgnorePattern: '^[A-Z_]', varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // `toneForValue` is a token-class helper rather than a component, and it
+    // lives in ui.jsx on purpose: it is the DOM half of the irradiance ramp and
+    // belongs beside MonthStrip and RampLegend, which are its neighbours and its
+    // only reason to exist. The cost is that editing ui.jsx full-reloads instead
+    // of hot-swapping. Named explicitly, so any OTHER non-component export from
+    // this file still fails the rule.
+    files: ['src/components/ui.jsx'],
+    rules: {
+      'react-refresh/only-export-components': [
+        'error',
+        { allowConstantExport: true, allowExportNames: ['toneForValue'] },
+      ],
+    },
+  },
 ])

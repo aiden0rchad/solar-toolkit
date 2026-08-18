@@ -1,155 +1,519 @@
-// Daylight — single source of truth for Recharts styling.
-// Nothing in src/tools should hardcode a chart color, tick size or tooltip style;
-// import from here instead. Values mirror the CSS custom properties in src/index.css.
+// Instrument — Recharts styling, resolved at RUNTIME from computed style.
+//
+// Recharts takes literal colour props (`stroke="#35d3ff"`); it cannot read a CSS
+// custom property. A hex written in this file would therefore become a second
+// source of truth the instant the theme flips — the chart would keep its light
+// colours on a dark ground. So nothing here is a literal colour: every value is
+// read from `getComputedStyle(document.documentElement)` and re-read when the
+// theme changes. src/index.css owns colour; this file only observes it.
+//
+// The exported prop bundles are `let` bindings on purpose. ES module bindings
+// are live, so a re-render after a theme change picks up the new values even in
+// a component that has not migrated to `useChartTokens()` yet.
 
-// --- tokens -----------------------------------------------------------------
+import { useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
+import { DARK_QUERY } from '../theme/useTheme';
 
-export const INK = '#0b0b0b';
-export const INK_2 = '#52514e';
-export const INK_3 = '#6f6c67';
-export const LINE = '#e4e2dd';
-export const GRID = '#e1e0d9';
-export const BASELINE = '#c3c2b7';
-export const SURFACE = '#ffffff';
-export const ACCENT = '#b45309';
-export const GOOD = '#006300';
-export const BAD = '#d03b3b';
+const canUseDom = typeof window !== 'undefined' && typeof document !== 'undefined';
 
-// Series assignment is entity-stable app-wide and never repainted by filters or
-// series count: blue is always the protagonist (solar / proposed / EV / battery),
-// orange is always the cost baseline (utility / do-nothing / gas). Aqua is a rare
-// third series and may only be used on a chart that carries a legend.
-export const SERIES = {
-  solar: '#2a78d6',
-  grid: '#eb6834',
-  third: '#1baf7a',
+// --- token read --------------------------------------------------------------
+
+/**
+ * CSS custom property -> key on the resolved token object. Instrument base
+ * tokens only — one property per key, so nothing is read twice. Several older
+ * keys serve two roles (the chart grid IS `--rule`, the axis baseline IS
+ * `--rule-strong`); the builders below name the one token rather than probing
+ * it a second time under a second name.
+ */
+const TOKEN_MAP = {
+  // data — the only chroma
+  '--d-solar': 'proposed',
+  '--d-grid': 'baselineStroke',
+  '--d-third': 'third',
+  '--d-good': 'good',
+  '--d-bad': 'bad',
+  // data — the irradiance ramp, low irradiance to high. Six ordinal stops;
+  // `derive` gathers them into `ramp` so a consumer indexes an array instead
+  // of six keys.
+  '--ir-0': 'ir0',
+  '--ir-1': 'ir1',
+  '--ir-2': 'ir2',
+  '--ir-3': 'ir3',
+  '--ir-4': 'ir4',
+  '--ir-5': 'ir5',
+  // chrome — achromatic, always
+  '--field': 'field',
+  '--surface': 'surface',
+  '--raised': 'raised',
+  '--overlay': 'overlay',
+  '--ink': 'ink',
+  '--ink-2': 'ink2',
+  '--ink-3': 'ink3',
+  '--rule': 'rule',
+  '--rule-strong': 'ruleStrong',
+  // the one non-colour token
+  '--wash-opacity': 'washOpacity',
 };
 
-// --- chrome -----------------------------------------------------------------
+/**
+ * The two derived keys. Everything else on the token object is a base
+ * Instrument token under its own name — the Counterfoil alias layer this file
+ * used to mirror in JS (`grid`, `axis`, `hair`, `ruleHeavy`, `mark`, `paper`,
+ * `sunken`) is gone, and the builders below name `rule` / `ruleStrong` /
+ * `bad` / `field` / `raised` directly.
+ */
+function derive(t) {
+  // --d-grid; the do-nothing baseline carries no fill, so fill IS the stroke.
+  t.baselineFill = t.baselineStroke;
+  // The sequential scale as an array, low -> high. Built here rather than
+  // probed a seventh time: these are the same six values already resolved.
+  t.ramp = [t.ir0, t.ir1, t.ir2, t.ir3, t.ir4, t.ir5];
+  return t;
+}
 
-/** CartesianGrid stroke. Solid hairline — dashes are reserved for annotations. */
-export const gridStroke = GRID;
-/** Axis line / baseline stroke. */
-export const axisStroke = BASELINE;
+let cache = null;
 
-/** Spread onto <CartesianGrid />. Horizontal only, solid, no dasharray. */
-export const gridProps = {
-  stroke: GRID,
-  vertical: false,
-  horizontal: true,
+/**
+ * VERIFIED IN CHROME, and the reason this file is shaped the way it is:
+ * `getComputedStyle(root).getPropertyValue('--d-solar')` returns the literal
+ * string `"light-dark(#0b6f96,#35d3ff)"`. Unregistered custom properties are
+ * substitution values — `light-dark()` inside one is not resolved until it lands
+ * in a real property, so the raw read is useless as a Recharts `stroke`.
+ *
+ * So tokens that are still functions get resolved the only way a page can ask
+ * the engine what a colour actually is: assign `color: var(--token)` to an
+ * attached element and read the computed value back. That resolves against the
+ * computed `color-scheme`, which is what the reader is actually looking at —
+ * both the explicit `data-theme` override and the system preference. One hidden
+ * host, all probes appended before any read, so it costs a single style recalc.
+ */
+function resolveViaProbe(properties) {
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.cssText =
+    'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none';
+
+  const probes = properties.map(({ property, numeric }) => {
+    const span = document.createElement('span');
+    if (numeric) span.style.opacity = `var(${property})`;
+    else span.style.color = `var(${property})`;
+    host.appendChild(span);
+    return span;
+  });
+
+  (document.body || document.documentElement).appendChild(host);
+  const values = probes.map((span, i) => {
+    const computed = getComputedStyle(span);
+    return properties[i].numeric ? computed.opacity : computed.color;
+  });
+  host.remove();
+  return values;
+}
+
+/**
+ * Every chart token as resolved for the theme currently on screen. Memoised —
+ * this touches style recalc and a chart would otherwise call it per render — and
+ * invalidated by the theme watcher below, so the identity is stable between
+ * theme changes and therefore safe as a `useSyncExternalStore` snapshot.
+ */
+export function readChartTokens() {
+  if (cache) return cache;
+  if (!canUseDom) {
+    // No document to read. There is nothing truthful to return, and inventing a
+    // palette here is precisely the second source of truth this file exists to
+    // prevent. The app is client-only; this branch is defensive.
+    cache = derive(
+      Object.fromEntries(Object.values(TOKEN_MAP).map((key) => [key, ''])),
+    );
+    cache.washOpacity = 0.12;
+    return cache;
+  }
+
+  const style = getComputedStyle(document.documentElement);
+  const tokens = {};
+  const pending = [];
+
+  for (const [property, key] of Object.entries(TOKEN_MAP)) {
+    const raw = style.getPropertyValue(property).trim();
+    // A plain literal (`0.12`, or a hex from the print block) needs no probe.
+    if (raw && !raw.includes('light-dark(') && !raw.includes('var(')) {
+      tokens[key] = raw;
+    } else {
+      pending.push({ property, key, numeric: property === '--wash-opacity' });
+    }
+  }
+
+  if (pending.length) {
+    const resolved = resolveViaProbe(pending);
+    pending.forEach(({ key }, i) => {
+      tokens[key] = resolved[i];
+    });
+  }
+
+  const wash = Number.parseFloat(tokens.washOpacity);
+  tokens.washOpacity = Number.isFinite(wash) ? wash : 0.12;
+  cache = derive(tokens);
+  return cache;
+}
+
+// --- theme watching ----------------------------------------------------------
+
+const listeners = new Set();
+
+function invalidate() {
+  cache = null;
+  rebuild(readChartTokens());
+  for (const listener of listeners) listener();
+}
+
+/**
+ * Print is always the light theme (src/index.css pins the tokens), but a chart
+ * is not reachable from CSS: Recharts writes `stroke` and `fill` onto the SVG as
+ * presentation attributes, resolved when the component last rendered. A
+ * consultant printing from dark mode would otherwise get the dark strokes on the
+ * light sheet — #35d3ff on #ffffff is 1.8:1, well under the 3:1 a series owes
+ * its own surface.
+ *
+ * So the attribute the probe reads is flipped for the duration of the print and
+ * restored afterwards. The MutationObserver above would notice, but it fires on
+ * a microtask and React would schedule the re-render asynchronously — Chrome
+ * paints the print document straight after this handler returns. `flushSync`
+ * makes the re-render happen before the snapshot is taken.
+ */
+let themeBeforePrint;
+
+function forceLightForPrint() {
+  const root = document.documentElement;
+  themeBeforePrint = 'theme' in root.dataset ? root.dataset.theme : null;
+  if (themeBeforePrint === 'light') return;
+  root.dataset.theme = 'light';
+  flushSync(invalidate);
+}
+
+function restoreAfterPrint() {
+  if (themeBeforePrint === undefined) return;
+  const root = document.documentElement;
+  if (themeBeforePrint === null) delete root.dataset.theme;
+  else root.dataset.theme = themeBeforePrint;
+  themeBeforePrint = undefined;
+  flushSync(invalidate);
+}
+
+if (canUseDom) {
+  // The explicit override: ThemeProvider stamps `data-theme` on <html>.
+  new MutationObserver(invalidate).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+  // The system preference, which moves without touching the attribute.
+  window.matchMedia(DARK_QUERY).addEventListener('change', invalidate);
+  // The printed sheet, which is light whatever is on screen.
+  window.addEventListener('beforeprint', forceLightForPrint);
+  window.addEventListener('afterprint', restoreAfterPrint);
+}
+
+const subscribe = (listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 };
+
+/** Live chart tokens. Re-renders the caller when the theme changes. */
+export function useChartTokens() {
+  return useSyncExternalStore(subscribe, readChartTokens, readChartTokens);
+}
+
+// --- series roles ------------------------------------------------------------
+
+/**
+ * Entity-stable, never repainted by filters or series count. Hue is the entity,
+ * not the rank: --d-solar is always the proposed system and --d-grid is always
+ * the do-nothing case, in every chart in the app. These are the only chroma the
+ * interface is allowed; the chrome around them is achromatic, which is what
+ * makes them read as luminous without a single glow effect.
+ */
+export const SERIES_ROLES = Object.freeze({
+  proposed: 'solar / battery / EV / the proposed system',
+  baseline: 'utility / grid import / do-nothing / the gas car',
+  third: 'rare; only on a chart that carries a legend',
+});
+
+// --- the irradiance ramp -----------------------------------------------------
+
+/**
+ * Stops in the sequential scale. Six, and that is the resolution of the
+ * instrument: the scale is ORDINAL, not continuous.
+ */
+export const RAMP_STOPS = 6;
+
+/**
+ * Position (0..1) -> stop index, STEPPED to the nearest stop and never
+ * interpolated.
+ *
+ * Interpolating would be the obvious "improvement" and it is wrong here: the
+ * six stops were measured — each clears 3:1 against its own page and holds
+ * >=1.20 luminance separation from its neighbours — and a mixed colour between
+ * two of them was verified against nothing. A stepped scale also stays
+ * readable: six bands a reader can count and match to a legend, rather than a
+ * continuous wash where no two cells are quite comparable.
+ *
+ * Out-of-range and non-finite positions clamp rather than throw; a chart asked
+ * to paint a bad number should paint an end stop, not disappear.
+ */
+export function rampIndexAt(t) {
+  const n = Number(t);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.min(1, Math.max(0, n)) * (RAMP_STOPS - 1));
+}
+
+/** Position (0..1) -> resolved colour for the theme on screen. */
+export function rampAt(t, tokenSet) {
+  return (tokenSet ?? readChartTokens()).ramp[rampIndexAt(t)];
+}
+
+/**
+ * Value in a domain -> stop index.
+ *
+ * A domain of zero width (twelve identical months, a single reading) resolves
+ * to mid-scale, not to the low end: nothing here is near zero, there is
+ * simply no variation to encode, and painting a flat series at the low end
+ * would state a measurement the data does not contain. An inverted domain
+ * (min > max) reverses the ramp, which is what a caller asking for it means.
+ */
+export function rampIndexFor(value, min, max) {
+  const v = Number(value);
+  const lo = Number(min);
+  const hi = Number(max);
+  if (!Number.isFinite(v) || !Number.isFinite(lo) || !Number.isFinite(hi)) {
+    return rampIndexAt(0.5);
+  }
+  if (hi === lo) return rampIndexAt(0.5);
+  return rampIndexAt((v - lo) / (hi - lo));
+}
+
+/** Value in a domain -> resolved colour. The convenience wrapper. */
+export function rampFor(value, min, max, tokenSet) {
+  return (tokenSet ?? readChartTokens()).ramp[rampIndexFor(value, min, max)];
+}
+
+// --- builders ----------------------------------------------------------------
+// Each takes a token set so a component can build props for a snapshot it
+// already holds; each has a live module-level binding below for convenience.
 
 /** Axis tick text: 11px ink-3, tabular figures so digits align down the column. */
-export const axisTick = { fontSize: 11, fill: INK_3, className: 'tnum' };
+export const axisTickOf = (t) => ({ fontSize: 11, fill: t.ink3, className: 'tnum' });
 
-/** Spread onto <XAxis />. Baseline rule, no tick marks. */
-export const xAxisProps = {
-  stroke: BASELINE,
+/** <CartesianGrid />. Horizontal only, SOLID hairline — dashed means annotation. */
+export const gridPropsOf = (t) => ({
+  stroke: t.rule,
+  strokeDasharray: '0',
+  vertical: false,
+  horizontal: true,
+});
+
+/** <XAxis />. A baseline rule, no tick marks. */
+export const xAxisPropsOf = (t) => ({
+  stroke: t.ruleStrong,
   tickLine: false,
-  axisLine: { stroke: BASELINE },
-  tick: axisTick,
-};
+  axisLine: { stroke: t.ruleStrong },
+  tick: axisTickOf(t),
+});
 
-/** Spread onto <YAxis />. No axis line at all, no tick marks. */
-export const yAxisProps = {
-  stroke: BASELINE,
+/** <YAxis />. Figures sit in a right-hand column, as on a bill. No axis line. */
+export const yAxisPropsOf = (t) => ({
+  orientation: 'right',
+  stroke: t.ruleStrong,
   tickLine: false,
   axisLine: false,
-  tick: axisTick,
-};
+  tick: axisTickOf(t),
+});
 
-// --- tooltip ----------------------------------------------------------------
-
-/** Spread onto <Tooltip /> on line/area charts. */
-export const chartTooltip = {
+/**
+ * <Tooltip />. A small floating sheet on --overlay: introduced by the same 2px
+ * `--rule-strong` every other sheet is introduced by, and carrying no border on
+ * its other three sides, because containers here have no borders.
+ */
+export const tooltipPropsOf = (t) => ({
   contentStyle: {
-    background: SURFACE,
-    border: `1px solid ${LINE}`,
-    borderRadius: 6,
-    boxShadow: '0 4px 12px rgba(11,11,11,0.08)',
-    padding: '8px 10px',
+    background: t.overlay,
+    border: 0,
+    borderTop: `2px solid ${t.ruleStrong}`,
+    borderRadius: 0,
+    boxShadow: 'none',
+    padding: '6px 9px 7px',
     fontSize: 12,
-    color: INK_2,
+    color: t.ink2,
   },
-  labelStyle: { color: INK, fontWeight: 600, marginBottom: 4 },
-  itemStyle: { color: INK_2, fontSize: 12, padding: 0 },
-  cursor: { stroke: BASELINE, strokeWidth: 1 },
-};
+  labelStyle: { color: t.ink, fontWeight: 600, marginBottom: 3 },
+  itemStyle: { color: t.ink2, fontSize: 12, padding: 0 },
+  cursor: { stroke: t.ruleStrong, strokeWidth: 1 },
+});
 
-/** Same tooltip, bar-chart cursor (a faint wash instead of a line). */
-export const barTooltip = {
-  ...chartTooltip,
-  cursor: { fill: 'rgba(11,11,11,0.04)' },
-};
+/** Same tooltip with a bar cursor: a faint wash of the sheet, not a line. */
+export const barTooltipPropsOf = (t) => ({
+  ...tooltipPropsOf(t),
+  cursor: { fill: t.rule, fillOpacity: 0.55 },
+});
 
-/**
- * Legacy export name. There is no dark theme any more; this is the light tooltip
- * above. Nothing in this repo imports it — it is retained because the Pro build
- * (solar-toolkit-pro) re-adds tools that still reference `darkTooltip`.
- * Prefer `chartTooltip` in new code.
- */
-export const darkTooltip = chartTooltip;
-
-// --- legend -----------------------------------------------------------------
-
-/**
- * Spread onto <Legend />. Required on every chart with 2+ series; single-series
- * charts get no legend (the title names the series).
- */
-export const legendProps = {
+/** <Legend />. Required on any chart with 2+ series; text never wears a hue. */
+export const legendPropsOf = (t) => ({
   align: 'right',
   verticalAlign: 'top',
   iconType: 'square',
   iconSize: 8,
-  wrapperStyle: { fontSize: 12, color: INK_2, paddingBottom: 12, lineHeight: '16px' },
-};
+  wrapperStyle: { fontSize: 12, color: t.ink2, paddingBottom: 12, lineHeight: '16px' },
+});
 
-// --- marks ------------------------------------------------------------------
-
-/** Spread onto <Line />: 2px, round caps, no dots. */
-export const lineProps = {
+/**
+ * The proposed system: 2px SOLID stroke with a wash.
+ * Paired with `baselineLine`, the encoding is redundant — weight, dash and fill
+ * all differ — so the chart survives greyscale, a photocopier and colour-vision
+ * deficiency without relying on hue.
+ *
+ * `isAnimationActive: false` everywhere below: nothing in this interface enters,
+ * and a series that grows in on mount — and again on every keystroke in the
+ * inputs — is an entrance animation by another name.
+ */
+export const proposedLineOf = (t) => ({
+  stroke: t.proposed,
   strokeWidth: 2,
+  isAnimationActive: false,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  fill: t.proposed,
+  fillOpacity: t.washOpacity,
+  dot: false,
+  activeDot: { r: 3.5, strokeWidth: 1, stroke: t.surface, fill: t.proposed },
+});
+
+/** The do-nothing baseline: 1.5px DASHED, NO fill. */
+export const baselineLineOf = (t) => ({
+  stroke: t.baselineStroke,
+  strokeWidth: 1.5,
+  isAnimationActive: false,
+  strokeDasharray: '5 3',
+  strokeLinecap: 'butt',
+  fill: 'none',
+  fillOpacity: 0,
+  dot: false,
+  activeDot: { r: 3.5, strokeWidth: 1, stroke: t.surface, fill: t.baselineStroke },
+});
+
+/** A plain line in the same idiom: 2px, no dots, no fill. Pass the stroke. */
+export const linePropsOf = () => ({
+  strokeWidth: 2,
+  isAnimationActive: false,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
   dot: false,
-  activeDot: { r: 4, strokeWidth: 2, stroke: SURFACE },
-};
+});
 
-/** Areas are a 10% wash of the series hue — never a gradient, never a block. */
-export const areaFillOpacity = 0.1;
-
-/** Spread onto <Area />. Pass fill/stroke as the series color. */
-export const areaProps = {
-  ...lineProps,
-  fillOpacity: areaFillOpacity,
-};
-
-/** End-of-line dot for the story series: filled series color, 2px white ring. */
-export const endDot = (color) => ({ r: 4, fill: color, stroke: SURFACE, strokeWidth: 2 });
-
-/** Spread onto <Bar />: max 24px thick, 4px rounded at the data end. */
-export const barProps = { maxBarSize: 24, radius: [4, 4, 0, 0] };
-
-/** Spread onto <BarChart /> — keeps a white gap between touching bars. */
-export const barChartProps = { barGap: 2, barCategoryGap: '28%' };
-
-// --- annotations ------------------------------------------------------------
-
-/** Spread onto an annotation <ReferenceLine />. Dashed = annotation, always. */
-export const annotationLine = {
-  stroke: INK_3,
+/** Annotation <ReferenceLine />. Dashed hairline in ink-3 — annotation, always. */
+export const annotationLineOf = (t) => ({
+  stroke: t.ink3,
   strokeWidth: 1,
   strokeDasharray: '3 3',
-};
+});
 
-/** Label style for the annotation above. */
-export const annotationLabel = { fontSize: 11, fill: INK_3 };
+/** Label for the annotation above. */
+export const annotationLabelOf = (t) => ({ fontSize: 11, fill: t.ink3 });
 
-// --- formatters -------------------------------------------------------------
+/** <Bar />. Radius is 0 here, everywhere, absolutely. */
+export const barPropsOf = () => ({ maxBarSize: 24, radius: 0, isAnimationActive: false });
+
+/** End-of-line dot: filled series colour, ringed in the sheet it sits on. */
+export const endDot = (color) => ({
+  r: 3.5,
+  fill: color,
+  stroke: readChartTokens().surface,
+  strokeWidth: 2,
+});
+
+// --- live bindings -----------------------------------------------------------
+// Reassigned by `invalidate()` on every theme change.
+
+export let tokens = readChartTokens();
+
+export let axisTick = axisTickOf(tokens);
+export let gridProps = gridPropsOf(tokens);
+export let xAxisProps = xAxisPropsOf(tokens);
+export let yAxisProps = yAxisPropsOf(tokens);
+export let tooltipProps = tooltipPropsOf(tokens);
+export let barTooltipProps = barTooltipPropsOf(tokens);
+export let legendProps = legendPropsOf(tokens);
+export let proposedLine = proposedLineOf(tokens);
+export let baselineLine = baselineLineOf(tokens);
+export let lineProps = linePropsOf(tokens);
+export let annotationLine = annotationLineOf(tokens);
+export let annotationLabel = annotationLabelOf(tokens);
+export let barProps = barPropsOf(tokens);
+
+/** Series colours by role. Entity-stable; see SERIES_ROLES. */
+export let SERIES = seriesOf(tokens);
+
+function seriesOf(t) {
+  return {
+    proposed: t.proposed,
+    baseline: t.baselineStroke,
+    baselineFill: t.baselineFill,
+    third: t.third,
+  };
+}
+
+function rebuild(t) {
+  tokens = t;
+
+  axisTick = axisTickOf(t);
+  gridProps = gridPropsOf(t);
+  xAxisProps = xAxisPropsOf(t);
+  yAxisProps = yAxisPropsOf(t);
+  tooltipProps = tooltipPropsOf(t);
+  barTooltipProps = barTooltipPropsOf(t);
+  legendProps = legendPropsOf(t);
+  proposedLine = proposedLineOf(t);
+  baselineLine = baselineLineOf(t);
+  lineProps = linePropsOf(t);
+  annotationLine = annotationLineOf(t);
+  annotationLabel = annotationLabelOf(t);
+  barProps = barPropsOf(t);
+
+  SERIES = seriesOf(t);
+}
 
 /**
- * Axis tick formatter: clean rounded money, e.g. 160000 -> "$160k", -2500 -> "-$2.5k".
+ * Everything a chart needs for the theme on screen, re-resolved when it flips.
+ * Components should prefer this over the module bindings.
  */
+export function useChartTheme() {
+  const t = useChartTokens();
+  return {
+    tokens: t,
+    series: seriesOf(t),
+    // The sequential scale, resolved for the theme on screen. `rampAt` /
+    // `rampFor` are bound to this snapshot so a chart cannot paint one band
+    // from the old theme mid-flip.
+    ramp: t.ramp,
+    rampAt: (position) => rampAt(position, t),
+    rampFor: (value, min, max) => rampFor(value, min, max, t),
+    gridProps: gridPropsOf(t),
+    xAxisProps: xAxisPropsOf(t),
+    yAxisProps: yAxisPropsOf(t),
+    tooltipProps: tooltipPropsOf(t),
+    barTooltipProps: barTooltipPropsOf(t),
+    legendProps: legendPropsOf(t),
+    proposedLine: proposedLineOf(t),
+    baselineLine: baselineLineOf(t),
+    lineProps: linePropsOf(t),
+    annotationLine: annotationLineOf(t),
+    annotationLabel: annotationLabelOf(t),
+    barProps: barPropsOf(t),
+  };
+}
+
+// --- formatters --------------------------------------------------------------
+// Pure; no colour, no theme.
+
+/** Axis ticks: rounded money, e.g. 160000 -> "$160k", -2500 -> "-$2.5k". */
 export const currencyTick = (value) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
@@ -166,10 +530,13 @@ export const currencyTick = (value) => {
   return `${sign}$${Math.round(abs)}`;
 };
 
-/** Tooltip/value formatter: whole dollars with separators, e.g. "$1,234". */
+/** Tooltip values: whole dollars with separators, e.g. "$1,234". */
 export const currencyValue = (value) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   const sign = n < 0 ? '-' : '';
   return `${sign}$${Math.round(Math.abs(n)).toLocaleString()}`;
 };
+
+/** <BarChart /> spacing — keeps a gap of paper between touching bars. */
+export const barChartProps = { barGap: 2, barCategoryGap: '28%' };
