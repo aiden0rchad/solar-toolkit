@@ -6,8 +6,8 @@ import { Card, Figure } from '../components/ui';
 //
 // These pages argue in prose, but they are still sheets of this instrument and
 // not a separate publication: a `Card` opened by the 2px `--rule-strong` rule,
-// an `.eyebrow` silkscreened above the heading, the same 28px condensed h2
-// every other view heads at, 15/1.5 body in `--ink-2` with oldstyle
+// an `.eyebrow` silkscreened above the heading, the same 26px h2 every other
+// view heads at, 15/1.5 body in `--ink-2` with oldstyle
 // proportional figures, numbered sections, and the import/export comparison as
 // a ruled table with the unit stated once at the head of each figure column.
 //
@@ -32,16 +32,21 @@ import { Card, Figure } from '../components/ui';
 
 const T13 = { fontSize: 'var(--size-13)', lineHeight: 'var(--lh-13)', letterSpacing: 'var(--track-13)' };
 const T15 = { fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' };
-const T28 = { fontSize: 'var(--size-28)', lineHeight: 'var(--lh-28)', letterSpacing: 'var(--track-28)' };
-const T40 = { fontSize: 'var(--size-40)', lineHeight: 'var(--lh-40)', letterSpacing: 'var(--track-40)' };
+const T26 = { fontSize: 'var(--size-26)', lineHeight: 'var(--lh-26)', letterSpacing: 'var(--track-26)' };
+const T34 = { fontSize: 'var(--size-34)', lineHeight: 'var(--lh-34)', letterSpacing: 'var(--track-34)' };
 
 /** The unit beside a readout: 0.4× the figure it qualifies, mono, `--ink-3`. */
-const UNIT_40 = { fontSize: 'calc(var(--size-40) * 0.4)', lineHeight: 1 };
+const UNIT_34 = { fontSize: 'calc(var(--size-34) * 0.4)', lineHeight: 1 };
 
 /**
  * A READOUT BLOCK — the same one every other view reports in. Micro-label above
- * in mono, the figure in Archivo condensed heavy, the unit in mono at 0.4× in
- * `--ink-3`.
+ * in mono, the figure in Public Sans bold on the 34 step, the unit in mono at
+ * 0.4× in `--ink-3`.
+ *
+ * 34 and 700, down from a condensed 40 at 800: Public Sans sets at full width
+ * where Archivo was squeezed to 62%, so the old step would have overrun the
+ * measure, and the extra weight a narrowed face needed to hold its colour
+ * becomes a figure shouting over its own micro-label at full width.
  *
  * UNTONED, deliberately. `toneForValue` inks a figure from its own magnitude
  * inside a domain the reader's own numbers sit in; this page measures nothing
@@ -52,11 +57,11 @@ const Readout = ({ label, prefix, value, unit }) => (
   <div className="min-w-0">
     <p className="eyebrow">{label}</p>
     <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
-      {prefix && <span className="font-mono text-ink-3" style={UNIT_40}>{prefix}</span>}
-      <span className="tnum text-ink" style={{ ...T40, fontStretch: '62%', fontWeight: 800 }}>
+      {prefix && <span className="font-mono text-ink-3" style={UNIT_34}>{prefix}</span>}
+      <span className="tnum text-ink" style={{ ...T34, fontWeight: 700 }}>
         {value}
       </span>
-      {unit && <span className="font-mono text-ink-3" style={UNIT_40}>{unit}</span>}
+      {unit && <span className="font-mono text-ink-3" style={UNIT_34}>{unit}</span>}
     </p>
   </div>
 );
@@ -103,7 +108,7 @@ const Explainer = ({ era, title, intro, rates, notes }) => {
       <header>
         <p className="eyebrow">{era}</p>
         {/* The masthead carries the page <h1>; every view heads at h2. */}
-        <h2 className="mt-1 font-semibold text-ink" style={{ ...T28, fontStretch: '75%' }}>{title}</h2>
+        <h2 className="mt-1 font-semibold text-ink" style={T26}>{title}</h2>
       </header>
 
       {/* THE DATA, before the prose. Two readouts on one ruled cluster: what a

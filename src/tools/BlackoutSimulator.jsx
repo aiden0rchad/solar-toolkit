@@ -68,24 +68,35 @@ const lineItem = typeAt(13);
 const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
   <div className={`flex items-baseline gap-2 ${className}`}>
     <span className="font-mono text-ink-3" style={footnote}>{number}</span>
-    <Tag className="eyebrow">{children}</Tag>
+    <Tag
+      className="font-semibold text-ink"
+      style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
+    >
+      {children}
+    </Tag>
   </div>
 );
 
 /**
  * A READOUT BLOCK — the unit this instrument reports in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy, tabular;
+ * Micro-label above in mono; the figure in Public Sans bold, tabular;
  * the unit in mono at 0.4× in `--ink-3`, so the quantity is the only thing
- * carrying weight. `step` picks the run: 56 for the one figure the reader came
- * for, 28 for the supporting cluster.
+ * carrying weight. `step` picks the run: 46 for the one figure the reader came
+ * for, 26 for the supporting cluster — both a notch below what they were,
+ * because Public Sans sets at full width where Archivo was squeezed to 62–68%.
+ *
+ * The figure sits at 700, not the 800 it wore condensed: a narrowed face needs
+ * more weight to hold the same colour on the page, and asking Public Sans for
+ * that at full width gives a figure that shouts over its own micro-label. Rank
+ * across the two runs is carried by the step alone, which is enough at 46/26.
  *
  * `tone` takes the figure's hue from the figure's OWN magnitude — a ramp token
  * class from `toneForValue`, applied to the figure alone. The micro-label, the
  * marker and the unit stay achromatic, because they are chrome; only the number
  * is a measurement. Without a `tone` the figure is `--ink`.
  */
-const Readout = ({ label, marker, value, unit, step = 28, stretch = '68%', weight = 700, tone }) => (
+const Readout = ({ label, marker, value, unit, step = 26, weight = 700, tone }) => (
   <div className="min-w-0">
     <div className="eyebrow">
       {label}
@@ -94,7 +105,7 @@ const Readout = ({ label, marker, value, unit, step = 28, stretch = '68%', weigh
     <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
       <span
         className={`tnum ${tone ?? 'text-ink'}`}
-        style={{ ...typeAt(step), fontStretch: stretch, fontWeight: weight }}
+        style={{ ...typeAt(step), fontWeight: weight }}
       >
         {value}
       </span>
@@ -242,7 +253,7 @@ const BlackoutSimulator = ({ onExport }) => {
       <header className="mb-7">
         <p className="eyebrow">Backup · hour by hour</p>
         {/* The masthead carries the page <h1>; every view heads at h2. */}
-        <h2 className="mt-1 font-semibold text-ink" style={{ ...typeAt(28), fontStretch: '75%' }}>
+        <h2 className="mt-1 font-semibold text-ink" style={typeAt(26)}>
           Blackout Simulator
         </h2>
         <p className="mt-1.5 max-w-[52ch] text-ink-2" style={typeAt(15)}>
@@ -392,7 +403,7 @@ const BlackoutSimulator = ({ onExport }) => {
           <Card className="px-5 pb-6 pt-4">
             <SectionHead number="03">Estimated Runtime</SectionHead>
 
-            {/* THE PRIMARY READOUT. Archivo condensed heavy at the top of the
+            {/* THE PRIMARY READOUT. Public Sans bold at the top of the
                 display run, its unit in mono at 0.4× — the one figure the
                 reader came for, and the only figure on the sheet entitled to a
                 hue, because the runtime IS the measurement. */}
@@ -401,9 +412,7 @@ const BlackoutSimulator = ({ onExport }) => {
                 label="Runtime"
                 value={estimatedHours}
                 unit="hrs"
-                step={56}
-                stretch="62%"
-                weight={800}
+                step={46}
                 tone={runtimeTone}
               />
             </div>
@@ -489,7 +498,7 @@ const BlackoutSimulator = ({ onExport }) => {
       <Rail>
         <aside className="rule pt-4">
           <Perforation className="mb-4" label="Assumptions follow" />
-          <h3 className="eyebrow mb-2">Assumptions behind these numbers</h3>
+          <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>Assumptions behind these numbers</h3>
           <dl>
             {notes.map((note, i) => (
               <Note key={note.key} term={note.term} symbol={MARKERS[i] ?? MARKERS[MARKERS.length - 1]}>

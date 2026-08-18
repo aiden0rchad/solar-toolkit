@@ -83,7 +83,7 @@ const ProLockCard = ({ tool }) => {
           {/* The masthead carries the page <h1>; every view heads at h2. */}
           <h2
             className="mt-1 font-semibold text-ink"
-            style={{ fontSize: 'var(--size-22)', lineHeight: 'var(--lh-22)', letterSpacing: 'var(--track-22)' }}
+            style={{ fontSize: 'var(--size-20)', lineHeight: 'var(--lh-20)', letterSpacing: 'var(--track-20)' }}
           >
             {details.title}
           </h2>

@@ -149,6 +149,10 @@ const journeys = [
 
 const featuredToolIds = new Set(['home', ...journeys.map(tool => tool.id)]);
 
+/** The registry is the single source of truth for a view's silhouette, so the
+ *  rail and this page can never disagree about what a tool looks like. */
+const iconFor = (tools, id) => tools.find(tool => tool.id === id)?.icon ?? null;
+
 /** 11px footnote — the voice everything secondary speaks in. */
 const footnote = {
   fontSize: 'var(--size-11)',
@@ -167,8 +171,21 @@ const lineItem = {
 // THE READOUT
 //
 // The DESIGN.md pattern, and the brightest thing on the page: a mono
-// micro-label above, the figure in Archivo condensed heavy on the display run,
+// micro-label above, the figure in Public Sans at 700 on the display run,
 // the unit in mono at 0.4× in --ink-3.
+//
+// THE SIZE IS 34, NOT 46, AND THE MEASURE IS WHY. These figures used to be set
+// at 56 condensed to 62%, which put a seven-figure number like `104,238` in
+// about 126px. Public Sans sets at full width, so the same string is ~179px at
+// 46 — and this cluster is three-across between 640 and 1024px, where each
+// column is about 168px. At 46 the unit would have been pushed off the end of
+// its own readout. At 34 the string occupies ~133px, which is the measure the
+// condensed setting held, so the cluster fits the column it always fitted.
+// This is the trade the face swap forces: a width axis bought height without
+// width, and nothing replaces it — so the run steps down and weight holds the
+// rank. It is not the same figure as Simple Solar ROI's payback, which is a
+// SINGLE hero of three or four glyphs and keeps 46; three co-equal readouts in
+// a narrow column are a cluster, and a cluster is set one step down.
 //
 // The figure takes its hue from ITS OWN VALUE, through `toneForValue` on the
 // irradiance ramp — a good result is warm, a poor one is cool, and the reader
@@ -185,16 +202,15 @@ const Readout = ({ label, figure, unit, tone }) => (
       <span
         className={`tnum ${tone}`}
         style={{
-          fontSize: 'var(--size-56)',
-          lineHeight: 'var(--lh-56)',
-          letterSpacing: 'var(--track-56)',
-          fontStretch: '62%',
+          fontSize: 'var(--size-34)',
+          lineHeight: 'var(--lh-34)',
+          letterSpacing: 'var(--track-34)',
           fontWeight: 700,
         }}
       >
         {figure}
       </span>
-      <span className="font-mono text-ink-3" style={{ fontSize: 'calc(var(--size-56) * 0.4)', lineHeight: 1 }}>
+      <span className="font-mono text-ink-3" style={{ fontSize: 'calc(var(--size-34) * 0.4)', lineHeight: 1 }}>
         {unit}
       </span>
     </p>
@@ -510,17 +526,27 @@ const Ordinal = ({ n }) => (
  * with a factual micro-label in the margin. Only the question moves under the
  * cursor, and only by underlining.
  */
-const JourneyRow = ({ n, title, copy, datum, onSelect }) => (
+const JourneyRow = ({ n, title, copy, datum, icon: Icon, onSelect }) => (
   <button
     type="button"
     onClick={onSelect}
     className="group flex w-full items-baseline gap-4 border-b border-rule py-5 text-left"
   >
     <Ordinal n={n} />
+    {/* The view's own silhouette, matching the rail. Achromatic: an icon points
+        at a tool, it does not measure anything, so it never takes a hue. */}
+    {Icon && (
+      <Icon
+        size={18}
+        strokeWidth={1.5}
+        aria-hidden="true"
+        className="flex-none translate-y-[3px] text-ink-3 group-hover:text-ink-2"
+      />
+    )}
     <span className="min-w-0 flex-1">
       <span
         className="block font-medium text-ink group-hover:underline"
-        style={{ fontSize: 'var(--size-22)', lineHeight: 'var(--lh-22)', letterSpacing: 'var(--track-22)' }}
+        style={{ fontSize: 'var(--size-20)', lineHeight: 'var(--lh-20)', letterSpacing: 'var(--track-20)' }}
       >
         {title}
       </span>
@@ -533,13 +559,21 @@ const JourneyRow = ({ n, title, copy, datum, onSelect }) => (
 );
 
 /** One entry in the quiet secondary index: a 13px line item on a hairline. */
-const IndexRow = ({ n, name, marker, onSelect }) => (
+const IndexRow = ({ n, name, marker, icon: Icon, onSelect }) => (
   <button
     type="button"
     onClick={onSelect}
-    className="group flex w-full items-baseline gap-4 border-b-[0.5px] border-rule py-2.5 text-left"
+    className="group flex w-full items-baseline gap-3 border-b-[0.5px] border-rule py-2.5 text-left"
   >
     <Ordinal n={n} />
+    {Icon && (
+      <Icon
+        size={14}
+        strokeWidth={1.5}
+        aria-hidden="true"
+        className="flex-none translate-y-[2px] text-ink-3 group-hover:text-ink-2"
+      />
+    )}
     <span className="min-w-0 flex-1 font-medium text-ink group-hover:underline" style={lineItem}>
       {name}
     </span>
@@ -547,13 +581,32 @@ const IndexRow = ({ n, name, marker, onSelect }) => (
   </button>
 );
 
-/** A ruled premise in the margin: micro-label left, figure right. */
+/**
+ * A ruled premise in the margin: micro-label left, figure right.
+ *
+ * The unit is 11 — the floor of the functional band — and not the 0.74× of the
+ * figure it used to be. That calc resolved to 9.6px, which was under the floor
+ * on the old face and reads smaller still beside Public Sans, whose deeper
+ * x-height makes the 13px figure next to it sit visibly larger than Archivo's
+ * did. The 0.4× unit rule is for a READOUT, where the figure is 34 or 46 and
+ * four tenths of it still lands in the band; on a 13px line item four tenths is
+ * 5px, which is why this one was a magic number in the first place. It lands on
+ * a scale token now. Rank still reads: 11px mono in --ink-3 against 13px sans
+ * in --ink separates by face, size and ink at once.
+ */
 const Premise = ({ label, value, unit }) => (
   <div className="flex items-baseline justify-between gap-3 border-b-[0.5px] border-rule py-1.5">
     <span className="eyebrow">{label}</span>
     <span className="tnum flex-none text-ink" style={lineItem}>
       {value}
-      {unit && <span className="ml-1 font-mono text-ink-3" style={{ fontSize: 'calc(var(--size-13) * 0.74)' }}>{unit}</span>}
+      {unit && (
+        <span
+          className="ml-1 font-mono text-ink-3"
+          style={{ fontSize: 'var(--size-11)', letterSpacing: 'var(--track-11)' }}
+        >
+          {unit}
+        </span>
+      )}
     </span>
   </div>
 );
@@ -596,7 +649,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
       {/* THE INSTRUMENT. Data first, before a single line of prose. */}
       <Card className="mt-2 px-5 pb-6 pt-4 sm:px-7">
         <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-          <h2 className="eyebrow">Twenty-five year projection · default case</h2>
+          <h2 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>Twenty-five year projection · default case</h2>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
             <LegendKey name="Go solar" proposed />
             <LegendKey name="Keep buying from utility" />
@@ -617,7 +670,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
                 average hides. The heading and the key are chrome and stay
                 achromatic — only the cells carry hue. */}
             <div className="mt-7 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-              <h3 className="eyebrow">First-year production · by month</h3>
+              <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>First-year production · by month</h3>
               <RampLegend low={`${lowMonth.toLocaleString()} kWh`} high={`${peakMonth.toLocaleString()} kWh`} />
             </div>
             <MonthStrip
@@ -672,10 +725,9 @@ const HomeLanding = ({ onNavigate, tools }) => {
           <h2
             className="font-semibold text-ink"
             style={{
-              fontSize: 'var(--size-28)',
-              lineHeight: 'var(--lh-28)',
-              letterSpacing: 'var(--track-28)',
-              fontStretch: '75%',
+              fontSize: 'var(--size-26)',
+              lineHeight: 'var(--lh-26)',
+              letterSpacing: 'var(--track-26)',
             }}
           >
             What are you trying to figure out?
@@ -690,7 +742,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
         </p>
         <hr className="rule-strong mt-4" />
         {journeys.map((journey, index) => (
-          <JourneyRow key={journey.id} n={index + 1} {...journey} onSelect={() => onNavigate(journey.id)} />
+          <JourneyRow key={journey.id} n={index + 1} {...journey} icon={iconFor(tools, journey.id)} onSelect={() => onNavigate(journey.id)} />
         ))}
       </section>
 
@@ -699,11 +751,12 @@ const HomeLanding = ({ onNavigate, tools }) => {
         <p className="eyebrow">More calculators and consultant tools</p>
         <hr className="rule-strong mt-1.5" />
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-10">
-          {moreTools.map(({ id, navLabel, tier }, index) => (
+          {moreTools.map(({ id, navLabel, tier, icon }, index) => (
             <IndexRow
               key={id}
               n={journeys.length + index + 1}
               name={navLabel}
+              icon={icon}
               /* ROI Calculator's navLabel already ends in "(Pro)" — don't stutter the suffix onto it. */
               marker={tier === 'pro' && !isPro && !navLabel.includes('(Pro)') ? 'Pro' : null}
               onSelect={() => onNavigate(id)}

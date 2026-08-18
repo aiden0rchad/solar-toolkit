@@ -4,27 +4,38 @@
 
 /* ============================================================================
    INSTRUMENT — fonts
-   Two self-hosted OFL variable faces, ONE @font-face PER FAMILY carrying the
-   full axis range. Never split a variable font into per-weight rules: several
+   Two self-hosted variable faces, ONE @font-face PER FAMILY carrying the full
+   axis range. Never split a variable font into per-weight rules: several
    single-weight rules pointing at one file is what silently flattened every
    bold in an earlier phase. Subset locally with layout features preserved —
-   the Google Fonts CSS API strips `tnum` and `zero`.
+   the Google Fonts CSS API strips `tnum`.
    See src/assets/fonts/LICENSES.md.
+
+   NEITHER FACE CARRIES A `wdth` AXIS, so there is no `font-stretch` here and
+   no `fontStretch` anywhere in src/. Asking for a width a face does not have
+   gets nothing, or gets a synthetic distortion — both are worse than the size
+   step below it. Rank is carried by size and weight.
+
+   NEITHER FACE CARRIES A `zero` FEATURE either, so there is no slashed zero to
+   ask for; verified with fontTools against these exact files. Do not add
+   `font-feature-settings: 'zero' 1` — it is inert, which is precisely the bug
+   this project already shipped once. Roboto Mono is subset to glyphs alone and
+   exposes NO layout features at all, so `'case' 1` on the micro-labels was the
+   same inert call and is gone with it.
    ========================================================================== */
 
 @font-face {
-  font-family: 'Archivo';
-  src: url('./assets/fonts/archivo-latin.woff2') format('woff2');
+  font-family: 'Public Sans';
+  src: url('./assets/fonts/public-sans-latin.woff2') format('woff2');
   font-weight: 100 900;
-  font-stretch: 62% 125%;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Spline Sans Mono';
-  src: url('./assets/fonts/spline-mono-latin.woff2') format('woff2');
-  font-weight: 300 700;
+  font-family: 'Roboto Mono';
+  src: url('./assets/fonts/roboto-mono-latin.woff2') format('woff2');
+  font-weight: 100 700;
   font-style: normal;
   font-display: swap;
 }
@@ -206,45 +217,68 @@ html[data-theme='dark'] {
 
 /* ============================================================================
    TYPE SCALE
-   Bi-modal, never even steps: functional band 10/11/12/13/15/17/22 — 10 is
+   Bi-modal, never even steps: a FUNCTIONAL band of 11/12/13/15/17/20 — 11 is
    the floor, and it is the size the .eyebrow signature is set at — and a
-   display run of 28/40/56. Line-height falls as size rises. Tracking is a
+   READOUT RUN of 26/34/46/60. Line-height falls as size rises. Tracking is a
    curve, not a preference: −0.0223 + 0.185·e^(−0.1745·px), crossing zero at ~12.1px.
+
+   THE RUN MOVED DOWN A NOTCH when Archivo left. Every display figure used to be
+   condensed to 62–68%, so a 56px readout occupied the measure of a ~35px one.
+   Public Sans has no width axis and sets at full width, so carrying the old
+   sizes across would have widened every readout by half again and overrun the
+   split pane. The compensation is the scale itself: the old 22/28/40/56 map to
+   20/26/34/46, one step down rather than nearest-value, and 60 sits at the top
+   of the run unclaimed. Size and weight carry the rank now; nothing is squeezed.
+
+   LINE-HEIGHT IS RE-PITCHED, NOT COPIED, against Public Sans's own measured
+   metrics: x-height 0.517em, cap 0.723em, ascender/descender box 1.175em. The
+   functional band keeps its leading — at that x-height the body sizes read at
+   the same apparent size they did — but the display end does not, because the
+   old display leading was set against a shallower box than 1.175em. At
+   26px, 1.18 put baselines 30.7px apart inside a 30.6px box: a wrapped heading
+   would have touched. Anything that WRAPS now sits above 1.175em; only the
+   single-line readout figures — lining digits, cap height 0.723em, no
+   descenders reachable — are allowed below it, which is what buys them their
+   tight display setting.
    ========================================================================== */
 
 :root {
-  --size-10: 10px;
+  /* functional band */
   --size-11: 11px;
   --size-12: 12px;
   --size-13: 13px;
   --size-15: 15px;
   --size-17: 17px;
-  --size-22: 22px;
-  --size-28: 28px;
-  --size-40: 40px;
-  --size-56: 56px;
+  --size-20: 20px;
+  /* readout run */
+  --size-26: 26px;
+  --size-34: 34px;
+  --size-46: 46px;
+  --size-60: 60px;
 
-  --track-10:  0.0100em;
-  --track-11:  0.005em;
+  --track-11:  0.0048em;
   --track-12:  0.0005em;
   --track-13: -0.0032em;
   --track-15: -0.0088em;
   --track-17: -0.0128em;
-  --track-22: -0.0183em;
-  --track-28: -0.0209em;
-  --track-40: -0.0221em;
-  --track-56: -0.0223em;
+  --track-20: -0.0167em;
+  --track-26: -0.0203em;
+  --track-34: -0.0218em;
+  --track-46: -0.0222em;
+  --track-60: -0.0223em;
 
-  --lh-10: 1.45;
+  /* Above the 1.175em content box wherever the text can wrap. */
   --lh-11: 1.45;
   --lh-12: 1.45;
   --lh-13: 1.50;
   --lh-15: 1.50;
   --lh-17: 1.40;
-  --lh-22: 1.25;
-  --lh-28: 1.18;
-  --lh-40: 1.10;
-  --lh-56: 1.05;
+  --lh-20: 1.30;
+  --lh-26: 1.26;
+  /* Below it, deliberately: single-line figures, no descenders. */
+  --lh-34: 1.14;
+  --lh-46: 1.08;
+  --lh-60: 1.04;
 }
 
 @layer base {
@@ -254,22 +288,27 @@ html[data-theme='dark'] {
     background-color: var(--field);
     color: var(--ink-2);
     scrollbar-color: var(--rule-strong) transparent;
-    /* Figures everywhere: lining, tabular, slashed zero. */
+    /* Figures everywhere: lining and tabular. There is no slashed zero in
+       either face, so there is nothing to ask for — see the fonts block. */
     font-variant-numeric: lining-nums tabular-nums;
-    font-feature-settings: 'zero' 1;
+    /* ss01 gives Public Sans its TAILED `l`, which is the whole reason this
+       call exists: it separates `l` from `1` and `I` in a product that is
+       mostly figures. Inherited, so nothing below may set
+       `font-feature-settings` for any other reason — the property replaces
+       rather than merges, and a second declaration silently drops the tail. */
+    font-feature-settings: 'ss01' 1;
   }
 
   body {
-    font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     background-color: var(--field);
     color: var(--ink-2);
   }
 
-  /* Prose wants text figures, not table figures — and an unslashed zero. */
+  /* Prose wants text figures, not table figures. */
   p,
   li {
     font-variant-numeric: oldstyle-nums proportional-nums;
-    font-feature-settings: 'zero' 0;
   }
 
   /* There are no boxes. `<hr>` is a rule at the 1px weight by default;
@@ -311,29 +350,38 @@ html[data-theme='dark'] {
 
 @layer components {
   /* --- numerals ------------------------------------------------------- */
+  /* Both carry `font-variant-numeric` ONLY. They must not restate
+     `font-feature-settings`: that property replaces the inherited value
+     outright, so a `'zero'`-era declaration here would strip `ss01` and take
+     the tailed `l` off every figure block in the app. */
   .tnum {
     font-variant-numeric: lining-nums tabular-nums;
-    font-feature-settings: 'zero' 1;
   }
 
   .pnum {
     font-variant-numeric: oldstyle-nums proportional-nums;
-    font-feature-settings: 'zero' 0;
   }
 
   /* --- micro-labels --------------------------------------------------- */
-  /* The signature of this system, and it is MONO: Spline Sans Mono is the
+  /* The signature of this system, and it is MONO: Roboto Mono is the
      instrument's voice, and these label every readout, panel and axis the way
-     silkscreen labels a faceplate. 10px / 600 / uppercase / +0.14em / ink-3.
-     `case` lifts punctuation to cap height. */
+     silkscreen labels a faceplate. 11px / 500 / uppercase / +0.12em / ink-3.
+
+     They label a READOUT, A COLUMN OR A PANEL — never a navigation item.
+     Thirteen uppercase mono labels stacked in a column stop reading as labels
+     and become texture; that is what the vertical rail's sentence-case Public
+     Sans rows exist to avoid.
+
+     No `font-feature-settings`: this subset of Roboto Mono carries no layout
+     features at all, so `'case' 1` asked for nothing, and declaring the
+     property would knock out the inherited `ss01` for the sake of it. */
   .eyebrow {
-    font-family: 'Spline Sans Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--size-10);
-    line-height: var(--lh-10);
-    font-weight: 600;
+    font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--size-11);
+    line-height: var(--lh-11);
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-feature-settings: 'case' 1, 'zero' 1;
+    letter-spacing: 0.12em;
     color: var(--ink-3);
   }
 

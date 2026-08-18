@@ -15,7 +15,7 @@ import { annualSunHours } from '../engine/solar';
 //
 // A load schedule read as a faceplate. The catalogue is pinned left; the
 // schedule it builds is live on the right, and it LEADS WITH DATA: the running
-// total is a readout block — mono micro-label, Archivo condensed heavy figure,
+// total is a readout block — mono micro-label, Public Sans bold figure,
 // unit in mono at 0.4× — before a single line item is printed. The schedule
 // itself is a ruled list of line items with right-aligned tabular figures,
 // closed by a filled TOTAL row, the way a bill closes a schedule.
@@ -139,17 +139,29 @@ const fmt = (value, digits = 1) =>
 const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
   <div className={`flex items-baseline gap-2 ${className}`}>
     <span className="font-mono text-ink-3" style={footnote}>{number}</span>
-    <Tag className="eyebrow">{children}</Tag>
+    <Tag
+      className="font-semibold text-ink"
+      style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
+    >
+      {children}
+    </Tag>
   </div>
 );
 
 /**
  * A READOUT BLOCK — the unit this instrument reports in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy, tabular; the
+ * Micro-label above in mono; the figure in Public Sans bold, tabular; the
  * currency mark and the unit in mono at 0.4× in `--ink-3`, so the quantity is
- * the only thing carrying weight. `step` picks the run: 56 for the figure the
- * reader came for, 28 for the supporting three.
+ * the only thing carrying weight. `step` picks the run: 46 for the figure the
+ * reader came for, 26 for the supporting three — both a notch below what they
+ * were, because Public Sans sets at full width where Archivo was squeezed to
+ * 62–68%.
+ *
+ * The figure sits at 700, not the 800 it wore condensed: a narrowed face needs
+ * more weight to hold the same colour on the page, and asking Public Sans for
+ * that at full width gives a figure that shouts over its own micro-label. Rank
+ * across the two runs is carried by the step alone, which is enough at 46/26.
  *
  * `tone` inks the FIGURE from its own magnitude on the irradiance ramp. Only
  * the figure: the micro-label, the marker, the prefix and the unit are chrome
@@ -159,7 +171,7 @@ const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
  * different units and painting them the same hue three times would be
  * decoration rather than a reading.
  */
-const Readout = ({ label, marker, prefix, value, unit, step = 28, stretch = '68%', weight = 700, tone }) => (
+const Readout = ({ label, marker, prefix, value, unit, step = 26, weight = 700, tone }) => (
   <div className="min-w-0">
     <div className="eyebrow">
       {label}
@@ -169,7 +181,7 @@ const Readout = ({ label, marker, prefix, value, unit, step = 28, stretch = '68%
       {prefix && <span className="font-mono text-ink-3" style={unitAt(step)}>{prefix}</span>}
       <span
         className={`tnum ${tone ?? 'text-ink'}`}
-        style={{ ...typeAt(step), fontStretch: stretch, fontWeight: weight }}
+        style={{ ...typeAt(step), fontWeight: weight }}
       >
         {value}
       </span>
@@ -290,7 +302,7 @@ const ApplianceAuditor = ({ onExport }) => {
       <header className="mb-7">
         <p className="eyebrow">Appliance Auditor</p>
         {/* The masthead carries the page <h1>; every view heads at h2. */}
-        <h2 className="mt-1 font-semibold text-ink" style={{ ...typeAt(28), fontStretch: '75%' }}>
+        <h2 className="mt-1 font-semibold text-ink" style={typeAt(26)}>
           Appliance Consumption Auditor
         </h2>
         <p className="mt-1.5 max-w-[52ch] text-ink-2" style={typeAt(15)}>
@@ -367,7 +379,7 @@ const ApplianceAuditor = ({ onExport }) => {
             <SectionHead number="03">Your load profile</SectionHead>
 
             {/* THE PRIMARY READOUT, before a single line item is printed: the
-                running total, in Archivo condensed heavy on the display run.
+                running total, in Public Sans bold on the display run.
                 Its hue is its own magnitude against the catalogue ceiling, and
                 the ramp legend beside it states both ends of that domain, so
                 the colour is legible as a reading rather than a paint job. */}
@@ -376,9 +388,7 @@ const ApplianceAuditor = ({ onExport }) => {
                 label="Added daily consumption"
                 value={fmt(totalAddedKwh)}
                 unit="kWh / day"
-                step={56}
-                stretch="62%"
-                weight={800}
+                step={46}
                 tone={toneForValue(totalAddedKwh, 0, CATALOGUE_CEILING)}
               />
               <RampLegend low="0" high={`${CATALOGUE_CEILING} kWh/day`} className="pb-1.5" />
@@ -478,7 +488,7 @@ const ApplianceAuditor = ({ onExport }) => {
             a rule above a perforation is the same division printed twice. */}
         <aside className="pt-1">
           <Perforation className="mb-4" label="Assumptions follow" />
-          <h3 className="eyebrow mb-2">Assumptions behind these numbers</h3>
+          <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>Assumptions behind these numbers</h3>
           <dl>
             <Sidenote marker={MARK_RATE} term="Utility rate used">
               ${UTILITY_RATE.toFixed(2)} / kWh

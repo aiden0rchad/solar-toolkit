@@ -14,8 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Archivo', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['Spline Sans Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        // Neither face has a `wdth` axis, so there is no condensed variant to
+        // reach for and no `font-stretch` anywhere in the app.
+        sans: ['Public Sans', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        mono: ['Roboto Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       // Every colour is a `var(--token)` reference: CSS owns colour, so no
       // component markup changes when the theme flips. Never a hex here.

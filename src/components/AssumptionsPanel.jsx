@@ -62,7 +62,7 @@ const AssumptionsPanel = ({
   return (
     <aside className="hair pt-4">
       <Perforation className="mb-4" label="Assumptions follow" />
-      <h3 className="eyebrow mb-2">Assumptions behind these numbers</h3>
+      <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>Assumptions behind these numbers</h3>
       <dl>
         {rows.map((row, i) => (
           <Row key={row.term} term={row.term} symbol={MARKERS[i + markerOffset] ?? MARKERS[MARKERS.length - 1]}>

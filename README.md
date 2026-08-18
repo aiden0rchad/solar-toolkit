@@ -10,8 +10,7 @@ It runs in dark or light, following your system by default. Everything you see i
 
 | | |
 |---|---|
-| ![Solar savings](docs/media/simple-roi.png) | ![EV switch](docs/media/ev-switch.png) |
-| ![Bill decoder, light theme](docs/media/bill-decoder.png) | ![Blackout simulator](docs/media/blackout.png) |
+| ![Solar savings, dark](docs/media/simple-roi.png) | ![Landing, light theme](docs/media/landing-light.png) |
 
 Most solar calculators online are lead generators. They exist to make solar look good so you'll leave your phone number. This one is just the math. Sometimes the math says yes, sometimes it says keep your money, and I think a calculator should be fine with either answer.
 

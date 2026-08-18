@@ -6,27 +6,41 @@ import { RAMP_STOPS, rampIndexFor } from './chartTheme';
 // INSTRUMENT — shared primitives.
 //
 // The grammar every tool inherits: no boxes, no radius, no shadow, no accent.
-// Hierarchy is carried by three rule weights (0.5 / 1 / 2px) and by type size,
-// weight and width, the way a bill carries it. Colour arrives only through
-// token classes (`bg-surface`, `text-ink-3`, `border-rule-strong`); there is
-// never a hex in this file.
+// Hierarchy is carried by three rule weights (0.5 / 1 / 2px) and by type size
+// and weight, the way a bill carries it. WIDTH IS NOT ONE OF THE LEVERS: neither
+// Public Sans nor Roboto Mono carries a `wdth` axis, so nothing here asks for a
+// condensed cut. Colour arrives only through token classes (`bg-surface`,
+// `text-ink-3`, `border-rule-strong`); there is never a hex in this file.
 // =============================================================================
 
 /**
  * A footnote marker keying a figure to its sidenote in the marginalia rail.
  *
- * `font-variant-position: super` raises the font's REAL superior glyph — both
- * bundled faces keep `sups` — so there is deliberately no `font-size` here:
- * shrinking a superior glyph shrinks something already small, and doing it in
- * some tools and not others made the same symbol two sizes across the app.
- * `<sup>` is not used for the same reason: it synthesises the glyph.
+ * This used to ride `font-variant-position: super`, on the claim that both
+ * bundled faces carried a REAL superior glyph for it to raise. Checked against
+ * the new files with fontTools, that claim is false in both directions: the
+ * Roboto Mono subset exposes NO layout features at all, and Public Sans's `sups`
+ * lookup covers the ten digits and nothing else — not `*`, not `†`, not `‡`,
+ * not `§`, which are the only characters this component is ever handed
+ * (src/components/markers.js). So the declaration was inert on every marker in
+ * the app, and what actually reached the screen was whatever synthesis the UA
+ * chose to do — full-size and on the baseline where it does none, which drops a
+ * loose asterisk into a right-aligned figure column.
+ *
+ * There is no superior glyph to reach for, so the raise is set explicitly here
+ * rather than left to the UA. The objection to `<sup>` was never synthesis as
+ * such — it was the same symbol coming out at two sizes because tools set it
+ * themselves. Setting it ONCE, here, in `em`, answers that: every marker is
+ * 0.72× its own row and rises the same amount, whether the row is a 12px
+ * sidenote or a 13px struck figure. `line-height: 0` keeps the raised glyph
+ * from opening up the ruled rows it sits in.
  */
 export const Marker = ({ symbol, className = 'ml-0.5' }) =>
   symbol
     ? (
       <span
         className={`select-none font-mono text-ink-3 ${className}`}
-        style={{ fontVariantPosition: 'super' }}
+        style={{ fontSize: '0.72em', lineHeight: 0, verticalAlign: 'super' }}
         aria-hidden="true"
       >
         {symbol}
@@ -66,7 +80,10 @@ export const Card = ({ children, className = "" }) => (
  * comes off the control weight rather than off `--rule`: `--rule` is
  * typographic division and measures 1.37:1 light / 1.26:1 dark on `--surface`,
  * which identifies nothing. The figure is tabular and right-aligned; the unit
- * sits at the end of that column in Spline Sans Mono at 0.74× in `--ink-3`.
+ * sits at the end of that column in Roboto Mono at the 11px floor in `--ink-3`.
+ * It used to be `calc(var(--size-15) * 0.74)` — 11.1px, a derived size sitting a
+ * tenth of a pixel off the only step below it. On the new scale that rounds to
+ * the token, so it names the token.
  * `--field` appears only under focus, and the focus ring is the global
  * `--focus` outline.
  *
@@ -118,7 +135,7 @@ export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1",
         {unit && (
           <span
             className="pointer-events-none absolute bottom-1.5 right-0 font-mono text-ink-3"
-            style={{ fontSize: 'calc(var(--size-15) * 0.74)', lineHeight: 1 }}
+            style={{ fontSize: 'var(--size-11)', lineHeight: 1 }}
           >
             {unit}
           </span>
@@ -205,7 +222,7 @@ export const Figure = ({ number, caption, children, className = "" }) => (
  * and it is the only chroma this row is allowed. It is permitted because it is
  * doing an auditor's job, not a decorative one.
  *
- * The reason is prose, therefore chrome, therefore achromatic — Spline Sans
+ * The reason is prose, therefore chrome, therefore achromatic — Roboto
  * Mono in `--ink-3`. It used to wear `--d-bad`, which put the alarm colour on
  * strings like "bought with cash — nothing is financed": a neutral fact about
  * the configuration, not a void state. Chroma belongs to data and nothing else,
@@ -343,7 +360,7 @@ const RAMP_TEXT = [
  * Returns a class, not a colour, so CSS keeps ownership of the value and the
  * readout re-tints on a theme flip without React hearing about it. It returns
  * the FOREGROUND series, so the answer is safe at any size in the scale — a
- * 13px line item as much as a 56px hero figure.
+ * 13px line item as much as a 46px display figure.
  */
 export const toneForValue = (value, min, max) => RAMP_TEXT[rampIndexFor(value, min, max)];
 

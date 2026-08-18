@@ -35,7 +35,7 @@ export const useShell = () => useContext(ShellContext);
  *
  * `premises` is `{ assumptionSet?: string, fields?: [{ label, value, unit? }] }`.
  * Values must be JSON-serialisable and already formatted for display — the bar
- * sets them tabular and appends `unit` in Spline Sans Mono at 0.74×, so a tool
+ * sets them tabular and appends `unit` in Roboto Mono at 0.74×, so a tool
  * passes `{ label: 'System', value: '8.4', unit: 'kW' }`, never a raw float with
  * the unit glued onto it.
  *

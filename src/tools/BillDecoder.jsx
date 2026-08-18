@@ -69,16 +69,23 @@ const LEGEND = typeAt(12);
 const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
   <div className={`flex items-baseline gap-2 ${className}`}>
     <span className="font-mono text-ink-3" style={FOOT}>{number}</span>
-    <Tag className="eyebrow">{children}</Tag>
+        <Tag
+      className="font-semibold text-ink"
+      style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
+    >
+      {children}
+    </Tag>
   </div>
 );
 
 /**
  * A READOUT BLOCK — the unit this instrument reports in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy and tabular;
+ * Micro-label above in mono; the figure in Public Sans bold and tabular;
  * the currency mark in mono at 0.4× in `--ink-3`, so the quantity is the only
- * thing carrying weight.
+ * thing carrying weight. The step is 34, one notch down the readout run from
+ * the 40 this block wore condensed: Public Sans has no width axis, so the old
+ * size would set half again as wide and crowd the block beside it.
  *
  * `tone` inks the FIGURE alone. The micro-label, the currency mark and the note
  * are chrome and stay achromatic. Only one of the two readouts here takes a
@@ -86,7 +93,7 @@ const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
  * wears the same state, while the residual is the sum of the ink rows and stays
  * `--ink` — so the cluster and the ledger are one reading, not two.
  */
-const Readout = ({ label, prefix, value, unit, step = 40, tone, note }) => (
+const Readout = ({ label, prefix, value, unit, step = 34, tone, note }) => (
   <div className="min-w-0">
     <div className="eyebrow">{label}</div>
     <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1">
@@ -95,7 +102,7 @@ const Readout = ({ label, prefix, value, unit, step = 40, tone, note }) => (
       )}
       <span
         className={`tnum ${tone ?? 'text-ink'}`}
-        style={{ ...typeAt(step), fontStretch: '62%', fontWeight: 700 }}
+        style={{ ...typeAt(step), fontWeight: 700 }}
       >
         {value}
       </span>
@@ -200,7 +207,7 @@ const BillDecoder = ({ onExport }) => {
         {/* The masthead carries the page <h1>; every view heads at h2. */}
         <h2
           className="mt-1 font-semibold text-ink"
-          style={{ ...typeAt(28), fontStretch: '75%' }}
+          style={typeAt(26)}
         >
           Smart Bill Decoder
         </h2>
@@ -401,7 +408,7 @@ const BillDecoder = ({ onExport }) => {
       <Rail>
         <aside className="pt-4">
           <Perforation className="mb-4" label="Notes follow" />
-          <h3 className="eyebrow mb-2">What this means for you</h3>
+          <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>What this means for you</h3>
           <dl>
             <div className="border-b border-rule py-1.5">
               <dt className="text-ink" style={LINE}>

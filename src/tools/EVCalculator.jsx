@@ -15,8 +15,8 @@ import { computeEvStats, evLoanPayment } from '../engine/ev';
 // of cards. It is a document instead: a ruled filter row, a real table of
 // vehicles, then your numbers on the left — sticky — and the figures on the
 // right. No boxes, no radius, no fills except the one that marks the selected
-// row; rank is carried by rule weight, size, and Archivo's width axis, exactly
-// as it is on a bill.
+// row; rank is carried by rule weight, size and weight alone — Public Sans has
+// no width axis, so nothing here is condensed — exactly as it is on a bill.
 //
 // THE ONE RULE holds: the only chroma on this sheet is measured. The plotted
 // series (`--d-solar` for the EV, `--d-grid` for the gas car), the savings
@@ -40,15 +40,25 @@ const T11 = type(11);
 const T12 = type(12);
 const T13 = type(13);
 const T15 = type(15);
-const T22 = type(22);
-const T28 = type(28);
+const T20 = type(20);
+const T26 = type(26);
 
 /**
- * The unit beside a readout figure: 0.4× the figure it qualifies, in Spline
- * Sans Mono and `--ink-3`. `line-height: 1` so it sits on the figure's baseline
+ * The unit beside a readout figure: 0.4× the figure it qualifies, in Roboto Mono
+ * and `--ink-3`. `line-height: 1` so it sits on the figure's baseline
  * rather than dragging the display leading down with it.
+ *
+ * FLOORED AT 10px. This sheet is the only one whose supporting cluster reports
+ * at 20 rather than 26, and 0.4× of 20 is 8px — below the 10–11px the mono
+ * micro-labels are set at everywhere else in the system, and small enough that
+ * `mi/kWh` closes up. The ratio still governs the display end (34 -> 13.6,
+ * 46 -> 18.4); the floor only catches the bottom of the run, which the scale
+ * stepping down a notch pushed under it.
  */
-const unitAt = (size) => ({ fontSize: `calc(var(--size-${size}) * 0.4)`, lineHeight: 1 });
+const unitAt = (size) => ({
+  fontSize: `max(10px, calc(var(--size-${size}) * 0.4))`,
+  lineHeight: 1,
+});
 
 /**
  * An INLINE unit — at the head of a column of like figures, or once beside a
@@ -75,7 +85,7 @@ const Section = ({ n, title, aside, className = '', children }) => (
   <section className={className}>
     <div className="flex items-baseline gap-2.5">
       <span className="font-mono text-ink-3" style={T11}>{n}</span>
-      <h3 className="font-semibold text-ink" style={{ ...T15, fontStretch: '75%' }}>{title}</h3>
+      <h3 className="font-semibold text-ink" style={T15}>{title}</h3>
       {aside && <span className="eyebrow ml-auto flex-none">{aside}</span>}
     </div>
     <hr className="rule mt-1.5" />
@@ -98,7 +108,8 @@ const BlockHead = ({ title, className = '' }) => (
 /**
  * One ruled line item: label left, figure right in a tabular column. `total`
  * promotes it to the summed row — 1px rule above, the figure up a step in the
- * scale and condensed — the way the bottom of a bill column is set.
+ * scale and a weight heavier — the way the bottom of a bill column is set.
+ * Nothing narrows: the step and the weight are the whole promotion now.
  *
  * `tone` inks the TOTAL alone, from a domain the caller states; the label and
  * the unit stay achromatic, because they are chrome.
@@ -111,11 +122,11 @@ const LineRow = ({ label, value, unit, total = false, tone = 'text-ink' }) => (
     <span className={total ? 'font-medium text-ink' : 'text-ink-2'} style={T13}>{label}</span>
     <span
       className={`tnum flex items-baseline gap-1 ${total ? `font-semibold ${tone}` : 'font-medium text-ink'}`}
-      style={total ? { ...T22, fontStretch: '68%' } : T13}
+      style={total ? T20 : T13}
     >
       {value}
       {unit && (
-        <span className="font-mono font-normal text-ink-3" style={unitAt(total ? 22 : 13)}>
+        <span className="font-mono font-normal text-ink-3" style={unitAt(total ? 20 : 13)}>
           {unit}
         </span>
       )}
@@ -127,10 +138,16 @@ const LineRow = ({ label, value, unit, total = false, tone = 'text-ink' }) => (
  * A READOUT BLOCK — the unit this instrument reports in, and the same block
  * Simple Solar ROI and the front page report in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy, tabular;
+ * Micro-label above in mono; the figure in Public Sans bold, tabular;
  * the currency mark and the unit in mono at 0.4× in `--ink-3`, so the quantity
- * is the only thing carrying weight. `size` picks the run: 40 for the one
- * figure the reader came for, 22 for the supporting cluster.
+ * is the only thing carrying weight. `size` picks the run: 34 for the one
+ * figure the reader came for, 20 for the supporting cluster — both a notch
+ * below what they were, because Public Sans sets at full width where Archivo
+ * was squeezed to 62–68% and the old sizes would now overrun the split pane.
+ *
+ * The figure sits at 700, not the 800 it wore condensed: a narrowed face needs
+ * more weight to hold the same colour on the page, and asking Public Sans for
+ * that at full width gives a figure that shouts over its own micro-label.
  *
  * `tone` takes the figure's hue from the figure's own magnitude — a ramp token
  * class from `toneForValue`, applied to the FIGURE alone. Without a `tone` the
@@ -138,14 +155,14 @@ const LineRow = ({ label, value, unit, total = false, tone = 'text-ink' }) => (
  * be: several figures on this sheet (a compound cost-per-mile, a break-even
  * date) have no domain that was measured, so they stay achromatic.
  */
-const Readout = ({ label, prefix, value, unit, size = 22, stretch = '68%', weight = 800, tone, note, className = '' }) => (
+const Readout = ({ label, prefix, value, unit, size = 20, weight = 700, tone, note, className = '' }) => (
   <div className={`min-w-0 ${className}`}>
     <p className="eyebrow">{label}</p>
     <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
       {prefix && <span className="font-mono text-ink-3" style={unitAt(size)}>{prefix}</span>}
       <span
         className={`tnum ${tone ?? 'text-ink'}`}
-        style={{ ...type(size), fontStretch: stretch, fontWeight: weight }}
+        style={{ ...type(size), fontWeight: weight }}
       >
         {value}
       </span>
@@ -418,7 +435,7 @@ const EVCalculator = ({ onExport }) => {
       </div>
 
       <header className="mt-2">
-        <h2 className="font-semibold text-ink" style={{ ...T28, fontStretch: '75%' }}>EV vs. Gas Calculator</h2>
+        <h2 className="font-semibold text-ink" style={T26}>EV vs. Gas Calculator</h2>
         <p className="mt-2 max-w-[52em] text-ink-2" style={T15}>
           See whether an EV would cost you less each month and over five years. Compare {evDatabase.length} models from {makes.length} manufacturers.
         </p>
@@ -735,7 +752,7 @@ const EVCalculator = ({ onExport }) => {
           <Card className="px-5 pb-6 pt-4">
             <Section n="04" title="Selected Vehicle" aside={selectedEV.category}>
               <div className="mt-3">
-                <h4 className="font-semibold text-ink" style={{ ...T22, fontStretch: '75%' }}>{selectedEV.name}</h4>
+                <h4 className="font-semibold text-ink" style={T20}>{selectedEV.name}</h4>
                 <p className="text-ink-2" style={T13}>{selectedEV.year} · {selectedEV.trim}</p>
               </div>
               {/* THE SPEC CLUSTER — ruled, not carded, and each figure inked by
@@ -753,7 +770,7 @@ const EVCalculator = ({ onExport }) => {
               ))}
             </ChoiceGroup>
 
-            {/* THE PRIMARY READOUT. Archivo condensed heavy on the display run,
+            {/* THE PRIMARY READOUT. Public Sans bold on the readout run at 34,
                 its currency mark in mono at 0.4× — the one figure the reader
                 came for.
 
@@ -768,8 +785,7 @@ const EVCalculator = ({ onExport }) => {
                 label={isSaving ? `${ownYears}-Year Savings` : `${ownYears}-Year Cost Increase`}
                 prefix="$"
                 value={Math.round(Math.abs(stats.totalSavings)).toLocaleString()}
-                size={40}
-                stretch="62%"
+                size={34}
                 tone={isSaving ? 'text-d-good' : 'text-d-bad'}
               />
             </div>
@@ -796,9 +812,9 @@ const EVCalculator = ({ onExport }) => {
                 value={
                   <>
                     <span>{stats.gasCPM.toFixed(0)}¢</span>
-                    <span className="mx-1.5 font-normal text-ink-3" style={{ ...T13, fontStretch: '100%' }}>gas →</span>
+                    <span className="mx-1.5 font-normal text-ink-3" style={T13}>gas →</span>
                     <span>{stats.evCPM.toFixed(1)}¢</span>
-                    <span className="ml-1 font-normal text-ink-3" style={{ ...T13, fontStretch: '100%' }}>EV</span>
+                    <span className="ml-1 font-normal text-ink-3" style={T13}>EV</span>
                   </>
                 }
               />

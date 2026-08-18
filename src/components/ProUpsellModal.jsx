@@ -89,7 +89,7 @@ const ProUpsellModal = ({ onClose }) => {
         <h2
           id="pro-upsell-title"
           className="pr-8 font-semibold text-ink"
-          style={{ fontSize: 'var(--size-22)', lineHeight: 'var(--lh-22)', letterSpacing: 'var(--track-22)' }}
+          style={{ fontSize: 'var(--size-20)', lineHeight: 'var(--lh-20)', letterSpacing: 'var(--track-20)' }}
         >
           Build a client proposal with Pro
         </h2>

@@ -12,7 +12,7 @@ import { SUN_PROFILES, annualSunHours } from '../engine/solar';
 // A split pane read as a faceplate: the premises are left and pinned, the
 // figures are right and live, so a reader changing an input watches the column
 // move. The numbers are READOUT BLOCKS — a mono micro-label silkscreened above,
-// the figure in Archivo condensed heavy, its unit in mono at 0.4× in `--ink-3`.
+// the figure in Public Sans bold, its unit in mono at 0.4× in `--ink-3`.
 // Grouped in ruled clusters, never in cards.
 //
 // THE ONE RULE holds: the only chroma on this sheet is measured. There is no
@@ -101,24 +101,36 @@ const fig = (value, digits = 0) =>
 const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
   <div className={`flex items-baseline gap-2 ${className}`}>
     <span className="font-mono text-ink-3" style={footnote}>{number}</span>
-    <Tag className="eyebrow">{children}</Tag>
+    <Tag
+      className="font-semibold text-ink"
+      style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
+    >
+      {children}
+    </Tag>
   </div>
 );
 
 /**
  * A READOUT BLOCK — the unit this instrument reports in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy, tabular, in
+ * Micro-label above in mono; the figure in Public Sans bold, tabular, in
  * `--ink`; the currency mark and the unit in mono at 0.4× in `--ink-3`, so the
- * quantity is the only thing carrying weight. `step` picks the run: 56 for the
- * one figure the reader came for, 40 for the sizing answer, 28 for the
- * supporting pair.
+ * quantity is the only thing carrying weight. `step` picks the run: 46 for the
+ * one figure the reader came for, 34 for the sizing answer, 26 for the
+ * supporting pair — each a notch below what it was, because Public Sans sets at
+ * full width where Archivo was squeezed to 62–68%.
+ *
+ * The figures sit at 700, not the 800 they wore condensed: a narrowed face
+ * needs more weight to hold the same colour on the page, and asking Public Sans
+ * for that at full width gives a figure that shouts over its own micro-label.
+ * Rank across the three runs is carried by the step alone, which is enough at
+ * 46/34/26.
  *
  * There is deliberately no `tone` prop. On this sheet the only stated domain is
  * the breakdown's own five loads, and a readout tinted against a domain nobody
  * declared would be decoration wearing a measurement's clothes.
  */
-const Readout = ({ label, marker, prefix, value, unit, step = 28, stretch = '68%', weight = 700, note }) => (
+const Readout = ({ label, marker, prefix, value, unit, step = 26, weight = 700, note }) => (
   <div className="min-w-0">
     <div className="eyebrow">
       {label}
@@ -128,7 +140,7 @@ const Readout = ({ label, marker, prefix, value, unit, step = 28, stretch = '68%
       {prefix && <span className="font-mono text-ink-3" style={unitAt(step)}>{prefix}</span>}
       <span
         className="tnum text-ink"
-        style={{ ...typeAt(step), fontStretch: stretch, fontWeight: weight }}
+        style={{ ...typeAt(step), fontWeight: weight }}
       >
         {value}
       </span>
@@ -275,7 +287,7 @@ const UsageEstimator = ({ onExport }) => {
         {/* The masthead carries the page <h1>; every view heads at h2. */}
         <h2
           className="mt-1 font-semibold text-ink"
-          style={{ ...typeAt(28), fontStretch: '75%' }}
+          style={typeAt(26)}
         >
           Usage Estimator
         </h2>
@@ -324,16 +336,14 @@ const UsageEstimator = ({ onExport }) => {
           <Card className="px-5 pb-6 pt-4">
             <SectionHead number="02">Estimated Usage</SectionHead>
 
-            {/* THE PRIMARY READOUT. Archivo condensed heavy on the display run,
+            {/* THE PRIMARY READOUT. Public Sans bold on the display run,
                 its unit in mono at 0.4× — the one figure the reader came for. */}
             <div className="mt-2.5 border-b-2 border-rule-strong pb-1.5">
               <Readout
                 label="Daily usage"
                 value={fig(estimation.dailyTotal, 1)}
                 unit="kWh / day"
-                step={56}
-                stretch="62%"
-                weight={800}
+                step={46}
               />
             </div>
 
@@ -362,9 +372,7 @@ const UsageEstimator = ({ onExport }) => {
                 marker={SIZING_MARKER}
                 value={fig(estimation.recommendedSystem, 1)}
                 unit="kW"
-                step={40}
-                stretch="62%"
-                weight={800}
+                step={34}
                 note={(
                   <>
                     Winter-independent: <span className="tnum">{fig(estimation.winterSystem, 1)}</span> kW,

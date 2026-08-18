@@ -138,32 +138,47 @@ in the app writes `text-ir-N`.
 
 ## Typography
 
-Two self-hosted OFL variable faces, subset with features preserved (see
-`src/assets/fonts/LICENSES.md`). Never use a Google Fonts CSS-API build — those strip `tnum`
-and `zero`, which is how an earlier build shipped an inert `.tnum` class.
+Two self-hosted variable faces, subset from upstream sources with features preserved (see
+`src/assets/fonts/LICENSES.md`). Never use a Google Fonts CSS-API build: those strip `tnum`,
+and an earlier build shipped a `.tnum` class against a font that had none.
 
-- **Archivo** (`wght` 100–900, `wdth` 62–125) — readouts and headings. The width axis is the
-  second voice: condensed (62–75) heavy for large figures.
-- **Spline Sans Mono** (`wght` 300–700) — every micro-label, unit, axis tick and status string.
-  Mono is the instrument's voice; it carries far more of the interface here than in a normal
-  app.
+- **Public Sans** (`wght` 100–900, OFL) — everything textual: navigation, headings, body,
+  readout figures. A neutral institutional grotesque, drawn for US government services. It is
+  deliberately unremarkable: the numbers are the thing with character, not the letterforms.
+- **Roboto Mono** (`wght` 100–700, Apache-2.0) — micro-labels, units, axis ticks, status
+  strings. Monospace, so its figures are inherently tabular.
 
-Micro-labels are the signature: 9–10px, weight 600, uppercase, `+0.14em`, `--ink-3`,
-`font-feature-settings: 'case' 1`. They label every readout, panel and axis, the way silkscreen
-labels a faceplate.
+`ss01` is enabled globally on Public Sans for its **tailed `l`**, which disambiguates `l` from
+`1` and `I`. In a product that is mostly figures, that is worth the one feature call.
 
-Scale is bi-modal: functional 10 / 11 / 12 / 13 / 15 / 17 / 22 — 10 is the floor, and it is the
-size the `.eyebrow` signature is set at — and a readout run of 28 / 40 / 56.
-Line-height falls as size rises. Figures are `lining-nums tabular-nums` with `'zero' 1`
-(slashed zero); prose (`p`, `li`) overrides to `oldstyle-nums proportional-nums`.
+⚠️ **Neither face has a `zero` feature, so there is no slashed zero.** Do not add
+`font-feature-settings: 'zero' 1` — it would do nothing, which is precisely the bug this
+project already shipped once. Where a zero could genuinely be misread, set the figure in the
+mono face instead.
+
+Scale is bi-modal: functional 11 / 12 / 13 / 15 / 17 / 20; readout run 26 / 34 / 46 / 60.
+Line-height falls as size rises. Figures use `lining-nums tabular-nums` from Public Sans;
+prose (`p`, `li`) overrides to `oldstyle-nums proportional-nums`.
+
+Micro-labels are Roboto Mono at 10–11px, weight 500, uppercase, `+0.12em`, `--ink-3`. They
+label a readout, a column or a panel — **never a navigation item**. Navigation is sentence
+case in Public Sans, because thirteen uppercase mono labels in a column stop reading as labels
+and become texture.
 
 ## Structure
 
+- **Navigation is a vertical rail, not a horizontal bar.** Thirteen views do not fit a
+  horizontal bar; that pattern tops out around seven. The rail is 220–240px, grouped under mono
+  section labels (Start here / Tools / Pro / Net metering), with 32–34px rows in sentence case
+  Public Sans at 13–14px. The active item carries weight plus a 2px `--d-solar` left edge and a
+  `--raised` ground. Group labels get real space above them; rows are never packed tighter than
+  32px. An earlier version set the rail at 186px with 4px rows and it read as a wall of text.
 - **Every screen leads with data, never with prose.** The landing page opens on a live plot
   with real readouts — not a headline over empty space. If a view has nothing to plot yet, it
   plots the default case.
-- **Readout blocks**: a mono micro-label above, a large Archivo-condensed figure, and its unit
-  in mono at 0.4× in `--ink-3`. Grouped in ruled clusters, never in cards.
+- **Readout blocks**: a mono micro-label above, a large Public Sans figure at 600–700, and its
+  unit in mono at 0.4× of it — floored at 10px, never smaller — in `--ink-3`. Grouped in ruled
+  clusters, never in cards. Nothing is condensed: rank is size and weight.
 - Panels are flat `--surface` fields separated by 1px `--rule`. No borders around containers,
   no radius above 2px, no shadow except the one modal.
 - Split pane on every calculator: inputs sticky left, results live right.

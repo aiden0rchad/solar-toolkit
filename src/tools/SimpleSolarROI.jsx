@@ -18,9 +18,9 @@ import { LOAD_SHAPES, SUN_PROFILES, annualSunHours } from '../engine/solar';
 // read without the assumption that produced it.
 //
 // The numbers are READOUT BLOCKS — a mono micro-label silkscreened above the
-// figure, the figure itself in Archivo condensed heavy, its unit in mono at
-// 0.4× in `--ink-3`. Grouped in a ruled cluster, never in cards, never four
-// stat cells in a row.
+// figure, the figure itself in Public Sans at the top of the weight band, its
+// unit in mono at 0.4× in `--ink-3`. Grouped in a ruled cluster, never in
+// cards, never four stat cells in a row.
 //
 // THE ONE RULE holds here: the only chroma on this sheet is measured. The
 // month-on-month delta (`--d-good` / `--d-bad`), the plotted baseline
@@ -139,17 +139,34 @@ const lineItem = typeAt(13);
 const SectionHead = ({ number, children, className = '', as: Tag = 'h2' }) => (
   <div className={`flex items-baseline gap-2 ${className}`}>
     <span className="font-mono text-ink-3" style={footnote}>{number}</span>
-    <Tag className="eyebrow">{children}</Tag>
+    <Tag
+      className="font-semibold text-ink"
+      style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
+    >
+      {children}
+    </Tag>
   </div>
 );
 
 /**
  * A READOUT BLOCK — the unit this instrument reports in.
  *
- * Micro-label above in mono; the figure in Archivo condensed heavy, tabular,
- * in `--ink`; the currency mark and the unit in mono at 0.4× in `--ink-3`, so
- * the quantity is the only thing carrying weight. `step` picks the run: 56 for
- * the one figure the reader came for, 28 for the supporting three.
+ * Micro-label above in mono; the figure in Public Sans, tabular, in `--ink`;
+ * the currency mark and the unit in mono at 0.4× in `--ink-3`, so the quantity
+ * is the only thing carrying weight. `step` picks the run: 46 for the one
+ * figure the reader came for, 26 for the supporting three.
+ *
+ * WEIGHT CARRIES THE RANK THE WIDTH AXIS USED TO. The hero used to be 56 at
+ * 62% width and 800, the supporting three 28 at 68% and 700 — three separate
+ * signals of rank, two of which the face swap deleted outright, because Public
+ * Sans has no `wdth` axis to condense and 800 sits outside the 600–700 band a
+ * readout is set in. Leaving both at 700 would have left size as the only
+ * remaining signal. So the hero takes 700 and the supporting run 600: one step
+ * on the axis the face actually has, under a 46/26 size step, and the reader
+ * still reads the two tiers apart at a glance. Nothing is squeezed to get
+ * there, and 600 is not thin — at 26px in `--ink` it is a solid semibold, and
+ * three full-width figures in a row at 700 laid down a heavier band of colour
+ * than the condensed setting ever did.
  *
  * `tone` takes the figure's hue from the figure's own magnitude — a ramp token
  * class from `toneForValue`, applied to the FIGURE alone. The micro-label above
@@ -161,7 +178,7 @@ const SectionHead = ({ number, children, className = '', as: Tag = 'h2' }) => (
  * direction, not a magnitude, so it keeps `--d-good` / `--d-bad` and prints its
  * sign, and therefore survives greyscale and colour-vision deficiency.
  */
-const Readout = ({ label, prefix, value, unit, step = 28, stretch = '68%', weight = 700, tone, delta, note }) => (
+const Readout = ({ label, prefix, value, unit, step = 26, weight = 600, tone, delta, note }) => (
   <div className="min-w-0">
     <div className="eyebrow">{label}</div>
     <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
@@ -170,7 +187,7 @@ const Readout = ({ label, prefix, value, unit, step = 28, stretch = '68%', weigh
       )}
       <span
         className={`tnum ${tone ?? 'text-ink'}`}
-        style={{ ...typeAt(step), fontStretch: stretch, fontWeight: weight }}
+        style={{ ...typeAt(step), fontWeight: weight }}
       >
         {value}
       </span>
@@ -367,7 +384,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
         {/* The masthead carries the page <h1>; every view heads at h2. */}
         <h2
           className="mt-1 font-semibold text-ink"
-          style={{ ...typeAt(28), fontStretch: '75%' }}
+          style={typeAt(26)}
         >
           Is solar worth it for me?
         </h2>
@@ -453,8 +470,12 @@ const SimpleSolarROI = ({ onNavigate }) => {
           <Card className="px-5 pb-6 pt-4">
             <SectionHead number="02">Your estimate</SectionHead>
 
-            {/* THE PRIMARY READOUT. Archivo condensed heavy on the display run,
-                its unit in mono at 0.4× — the one figure the reader came for.
+            {/* THE PRIMARY READOUT. Public Sans at 700 on the display run, its
+                unit in mono at 0.4× — the one figure the reader came for. It
+                keeps the top of the run at 46 because it is three or four
+                glyphs wide and sits alone across the full pane: the payback is
+                the one place on this sheet where a full-width face has the room
+                the condensed one used to save.
 
                 Its hue is the payback measured against the 25-year horizon, and
                 the domain is inverted on purpose: the ramp climbs as the years
@@ -466,9 +487,8 @@ const SimpleSolarROI = ({ onNavigate }) => {
                 label="Payback"
                 value={payback ? payback : '25+'}
                 unit="yrs"
-                step={56}
-                stretch="62%"
-                weight={800}
+                step={46}
+                weight={700}
                 tone={toneForValue(payback === null ? 25 : Number(payback), 25, 0)}
               />
             </div>
