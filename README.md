@@ -83,7 +83,7 @@ React 18, Vite 5, Tailwind 3, Recharts. Plain JSX, no TypeScript, no backend. Th
 
 The design system is documented in [DESIGN.md](DESIGN.md) and it is worth reading before changing anything visual. The short version: colour is reserved for data. Panels, rules, labels and navigation are grey on purpose, so a number that means something is the only thing on screen that glows, and it does that without a single shadow or blur. Both themes are defined once with `light-dark()`, and the chart colours resolve at runtime so a theme switch repaints the plots correctly.
 
-Fonts are Archivo and Spline Sans Mono, self hosted and subset from their variable sources with the OpenType features kept. That matters more than it sounds: the builds Google Fonts serves strip the tabular figure and slashed zero features, and a ledger full of numbers needs both.
+Fonts are Public Sans and Roboto Mono, self hosted and subset from their variable sources with the OpenType features kept. That matters more than it sounds: the builds Google Fonts serves strip the tabular figure feature, and a page full of numbers in columns needs it. Public Sans also gets its `ss01` set turned on for the tailed l, which stops it being read as a 1 or an I.
 
 ## License
 
