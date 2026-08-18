@@ -537,7 +537,7 @@ const IndexRow = ({ n, name, marker, onSelect }) => (
   <button
     type="button"
     onClick={onSelect}
-    className="group flex w-full items-baseline gap-4 border-b-[0.5px] border-hair py-2.5 text-left"
+    className="group flex w-full items-baseline gap-4 border-b-[0.5px] border-rule py-2.5 text-left"
   >
     <Ordinal n={n} />
     <span className="min-w-0 flex-1 font-medium text-ink group-hover:underline" style={lineItem}>
@@ -549,7 +549,7 @@ const IndexRow = ({ n, name, marker, onSelect }) => (
 
 /** A ruled premise in the margin: micro-label left, figure right. */
 const Premise = ({ label, value, unit }) => (
-  <div className="flex items-baseline justify-between gap-3 border-b-[0.5px] border-hair py-1.5">
+  <div className="flex items-baseline justify-between gap-3 border-b-[0.5px] border-rule py-1.5">
     <span className="eyebrow">{label}</span>
     <span className="tnum flex-none text-ink" style={lineItem}>
       {value}
@@ -688,7 +688,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
         >
           Start with one question. You’ll get honest numbers first, with the details available when you want them.
         </p>
-        <hr className="rule-heavy mt-4" />
+        <hr className="rule-strong mt-4" />
         {journeys.map((journey, index) => (
           <JourneyRow key={journey.id} n={index + 1} {...journey} onSelect={() => onNavigate(journey.id)} />
         ))}
@@ -697,7 +697,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
       {/* THE SECONDARY INDEX. Quiet, two columns, 13px. */}
       <section className="mt-12" aria-label="More tools">
         <p className="eyebrow">More calculators and consultant tools</p>
-        <hr className="rule-heavy mt-1.5" />
+        <hr className="rule-strong mt-1.5" />
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-10">
           {moreTools.map(({ id, navLabel, tier }, index) => (
             <IndexRow
@@ -730,7 +730,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
       <Rail>
         <aside>
           <p className="eyebrow">Fig. 1 — premises</p>
-          <hr className="rule-heavy mt-1.5" />
+          <hr className="rule-strong mt-1.5" />
           <Premise label="Monthly bill" value={MONTHLY_BILL} unit="$ / mo" />
           <Premise label="Region" value={REGION} />
           <Premise label="System" value={solarSize.toFixed(1)} unit="kW" />

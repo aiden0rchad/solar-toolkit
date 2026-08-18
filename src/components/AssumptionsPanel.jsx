@@ -2,7 +2,7 @@ import { MARKERS } from './markers';
 import { Marker, Perforation } from './ui';
 
 // =============================================================================
-// COUNTERFOIL — assumption sidenotes.
+// INSTRUMENT — assumption sidenotes.
 //
 // Not a panel and not a disclosure widget: marginalia. The premises behind the
 // figures are set as ruled `label · value` rows below a counterfoil tear, each
@@ -14,7 +14,7 @@ import { Marker, Perforation } from './ui';
 // =============================================================================
 
 const Row = ({ term, symbol, children }) => (
-  <div className="flex items-baseline justify-between gap-4 border-b-[0.5px] border-hair py-1">
+  <div className="flex items-baseline justify-between gap-4 border-b-[0.5px] border-rule py-1">
     <dt
       className="text-ink-2"
       style={{ fontSize: 'var(--size-12)', lineHeight: 'var(--lh-12)', letterSpacing: 'var(--track-12)' }}

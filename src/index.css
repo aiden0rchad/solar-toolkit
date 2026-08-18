@@ -74,9 +74,23 @@ html[data-theme='dark'] {
   --ink-2: light-dark(#3d4f60, #a8bccf); /* body */
   --ink-3: light-dark(#55697d, #7d92a8); /* mono micro-labels, axis text */
 
-  /* --- chrome: rules (achromatic) ------------------------------------- */
-  --rule:        light-dark(#d4dde6, #16202c); /* 1px division */
-  --rule-strong: light-dark(#aebdcc, #24384c); /* 2px division, active */
+  /* --- chrome: rules (achromatic) -------------------------------------
+     --rule and --rule-strong are TYPOGRAPHIC division: they separate blocks
+     of a document and are read as paper, not as component edges. Neither is
+     strong enough to identify a control, and neither is meant to be — the
+     dark --rule used to be byte-identical to --raised, which drew a 1px rule
+     at 1.00:1 inside a zebra row, i.e. nothing at all. It is off that value
+     now and holds 1.13:1 there.
+
+     --control-edge is the third weight and a different job: the resting
+     boundary of an interactive control (the underline on InputField, the
+     ledger inputs in Bill Decoder). WCAG 1.4.11 wants 3:1 to identify a
+     component, so this token clears it on --surface in both themes —
+     light 3.24:1, dark 4.31:1 — while staying achromatic like every other
+     piece of chrome. A rule that divides is not a rule that affords. */
+  --rule:         light-dark(#d4dde6, #1e2a38); /* 1px division */
+  --rule-strong:  light-dark(#aebdcc, #24384c); /* 2px division, active */
+  --control-edge: light-dark(#7f91a3, #687d92); /* resting edge of a control */
 
   /* --- chrome: modal backdrop. Never blurred. ------------------------- */
   --scrim: light-dark(rgb(10 20 32 / 0.45), rgb(2 5 9 / 0.66));
@@ -120,6 +134,42 @@ html[data-theme='dark'] {
   --ir-4: light-dark(#3f6211, #b9e05a);
   --ir-5: light-dark(#5a4907, #f2f08a); /* highest */
 
+  /* --- DATA — the irradiance ramp, FOREGROUND series -------------------
+     The six stops above are FILL values: month cells, chart bands, legend
+     swatches. A fill may sit at the pale low end because the strip that
+     carries it is redundantly encoded three ways over (a title per cell, an
+     sr-only table, the LOW/PEAK marks) — the reader is never asked to read a
+     quantity out of the hue alone. TYPE is a different contract: a figure
+     inked with a ramp stop is text, and text owes 4.5:1.
+
+     Light --ir-0 measures 2.55:1 on --surface and --ir-1 3.53:1; dark --ir-0
+     measures 4.48:1. As fills those pass (or are the sanctioned sequential
+     low end); as 13px line items and as display readouts they do not. So the
+     ramp's two roles are split rather than one of them being broken to fit
+     the other: --ir-N stays the measured fill scale, untouched, and --ir-t-N
+     is the same hue path (violet -> blue -> teal -> green -> olive/citron)
+     re-pitched so EVERY stop clears 4.5:1 on --surface, the sheet every toned
+     figure sits on. Only the stops that failed moved — light 0/1/2 and dark
+     0 — so two thirds of the ramp is the same colour in both roles.
+
+     Measured on --surface. Light: 4.60 / 4.97 / 5.35 / 5.67 / 7.08 / 8.78.
+     Dark: 4.90 / 5.40 / 6.93 / 9.28 / 12.11 / 15.37. Monotone in both, so the
+     series still steps; the light low end is compressed relative to the fill
+     ramp because the range between "legible on white" and "as dark as ink"
+     is smaller than the range between "pale" and "dark" — hue carries the
+     separation there, and the figure itself always states the value, so the
+     tone is redundant encoding and never the only reading.
+
+     A ramp stop is a foreground colour ONLY through this series. Consumers go
+     through `toneForValue` in src/components/ui.jsx; nothing should write
+     `text-ir-N`. Values are normative; do not re-pick them. */
+  --ir-t-0: light-dark(#7e6d9d, #8074eb); /* lowest  */
+  --ir-t-1: light-dark(#4171b1, #3f8fdd);
+  --ir-t-2: light-dark(#0a7682, #17b0b8);
+  --ir-t-3: light-dark(#1c763a, #4fd07a);
+  --ir-t-4: light-dark(#3f6211, #b9e05a);
+  --ir-t-5: light-dark(#5a4907, #f2f08a); /* highest */
+
   /* --- interface ------------------------------------------------------ */
   /* The focus ring encodes a live state, so it is allowed to be chromatic. */
   --focus: var(--d-solar);
@@ -127,37 +177,13 @@ html[data-theme='dark'] {
   --selection: var(--rule-strong);
 }
 
-/* ----------------------------------------------------------------------------
-   COMPATIBILITY LAYER — Counterfoil token names, kept as aliases.
-
-   These are the OLD names, still referenced throughout the components and by
-   tailwind.config.js. Aliasing them here lets the whole app switch palette
-   through this one file instead of a rename touching every consumer. They are
-   temporary: collapse them into the --field/--surface/--rule/--d-* names in a
-   later pass, then delete this block. Do not add new consumers of these names.
-   -------------------------------------------------------------------------- */
-:root {
-  --paper: var(--field);       /* page ground */
-  --sunken: var(--raised);     /* wells, table zebra */
-  --hair: var(--rule);         /* the old 0.5px weight collapses onto 1px */
-  --rule-heavy: var(--rule-strong);
-
-  --chart-grid: var(--rule);        /* gridlines */
-  --baseline: var(--rule-strong);   /* axis baseline */
-
-  --mark: var(--d-bad);        /* the struck-row rule */
-  --mark-wash: var(--raised);  /* the wash behind a struck row stays achromatic:
-                                  a large field of chroma is decoration, and the
-                                  1px --d-bad rule already carries the state. */
-
-  --good: var(--d-good);
-  --bad: var(--d-bad);
-
-  --s-proposed: var(--d-solar);
-  --s-baseline: var(--d-grid);        /* fill */
-  --s-baseline-stroke: var(--d-grid);
-  --s-third: var(--d-third);
-}
+/* The Counterfoil compatibility layer that used to sit here — --paper, --sunken,
+   --hair, --rule-heavy, --chart-grid, --baseline, --mark, --good/--bad and the
+   --s-* series names — is GONE. Every consumer now names an Instrument token
+   directly. Do not reintroduce an alias: a second name for a colour is how the
+   two halves of a redesign drift apart, and a `var()` naming a token that no
+   longer exists renders TRANSPARENT and fails silently, which is the worst
+   failure mode this system has. */
 
 /* `light-dark()` is a <color> function and cannot carry a number, so the one
    non-colour token is the single place a scheme test is unavoidable. Both
@@ -180,9 +206,10 @@ html[data-theme='dark'] {
 
 /* ============================================================================
    TYPE SCALE
-   Bi-modal, never even steps: functional band 11/12/13/15/17/22, display run
-   28/40/56. Line-height falls as size rises. Tracking is a curve, not a
-   preference: −0.0223 + 0.185·e^(−0.1745·px), crossing zero at ~12.1px.
+   Bi-modal, never even steps: functional band 10/11/12/13/15/17/22 — 10 is
+   the floor, and it is the size the .eyebrow signature is set at — and a
+   display run of 28/40/56. Line-height falls as size rises. Tracking is a
+   curve, not a preference: −0.0223 + 0.185·e^(−0.1745·px), crossing zero at ~12.1px.
    ========================================================================== */
 
 :root {
@@ -246,7 +273,7 @@ html[data-theme='dark'] {
   }
 
   /* There are no boxes. `<hr>` is a rule at the 1px weight by default;
-     .hair and .rule-heavy move it up or down the ladder. */
+     .hair and .rule-strong move it up or down the ladder. */
   hr {
     border: 0;
     border-top: 1px solid var(--rule);
@@ -324,7 +351,7 @@ html[data-theme='dark'] {
     border-top: 1px solid var(--rule);
   }
 
-  .rule-heavy {
+  .rule-strong {
     border: 0;
     border-top: 2px solid var(--rule-strong);
   }
@@ -379,8 +406,8 @@ html[data-theme='dark'] {
   :root[data-theme='dark'] {
     color-scheme: light;
 
-    /* Only the base tokens are re-declared. The compatibility aliases above
-       are plain `var()` references, so they follow these automatically. */
+    /* Every token in the system is re-declared here — there are no aliases
+       left to follow along behind them. */
     --field: #eaeff4;
     --surface: #ffffff;
     --raised: #f4f7fa;
@@ -392,6 +419,7 @@ html[data-theme='dark'] {
 
     --rule: #d4dde6;
     --rule-strong: #aebdcc;
+    --control-edge: #7f91a3;
 
     --scrim: rgb(10 20 32 / 0.45);
 
@@ -407,6 +435,13 @@ html[data-theme='dark'] {
     --ir-3: #1c763a;
     --ir-4: #3f6211;
     --ir-5: #5a4907;
+
+    --ir-t-0: #7e6d9d;
+    --ir-t-1: #4171b1;
+    --ir-t-2: #0a7682;
+    --ir-t-3: #1c763a;
+    --ir-t-4: #3f6211;
+    --ir-t-5: #5a4907;
 
     --wash-opacity: 0.12;
   }

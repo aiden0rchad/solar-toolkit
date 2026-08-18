@@ -33,7 +33,7 @@ const proDetails = {
 // paper and nothing else. No blur, no boxes, no radius — a page with the type
 // lifted off it, which is exactly what the reader is being shown.
 const ProMock = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden bg-paper" aria-hidden="true">
+  <div className="pointer-events-none absolute inset-0 overflow-hidden bg-field" aria-hidden="true">
     <div className="grid h-full grid-cols-[9rem_1fr] gap-8 p-8">
       <div className="space-y-5">
         {[70, 90, 55, 80, 65].map(width => (
@@ -61,13 +61,24 @@ const ProLockCard = ({ tool }) => {
   const details = proDetails[tool.id];
 
   // The shell owns <main>; this is a section inside it, never a second one.
+  //
+  // The sheet starts at the TOP of the column, at the same measure as every
+  // other view. It used to be centred inside `min-h-[70vh]`, which opened the
+  // three locked views on a third of a screen of empty field — the one screen
+  // in the app that read as padded out rather than dense, on a system whose
+  // stated position is that density is a feature. The ghost hairlines fill the
+  // column beneath the sheet instead, which is what they are for: the page
+  // with the type lifted off it, not a frame around a floating card.
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-5xl items-center justify-center">
-      <section className="relative w-full p-6 sm:p-10">
+    <div className="max-w-5xl">
+      {/* The min-height belongs to the GHOST, not to the sheet: it is how far
+          the ruled page runs on under what has been withheld. The sheet itself
+          is top-aligned in it. */}
+      <section className="relative min-h-[34rem]">
         <ProMock />
         {/* A sheet laid over the ghost: 2px rule, then the masthead of the
             thing being withheld, then its contents as ruled line items. */}
-        <div className="relative mx-auto max-w-xl border-t-2 border-rule-heavy bg-surface px-6 pb-7 pt-5 sm:px-8">
+        <div className="relative max-w-xl border-t-2 border-rule-strong bg-surface px-6 pb-7 pt-5">
           <div className="eyebrow">SolarPro Pro</div>
           {/* The masthead carries the page <h1>; every view heads at h2. */}
           <h2
@@ -80,7 +91,7 @@ const ProLockCard = ({ tool }) => {
             {details.bullets.map(bullet => (
               <li
                 key={bullet}
-                className="border-b-[0.5px] border-hair py-2 text-ink-2"
+                className="border-b-[0.5px] border-rule py-2 text-ink-2"
                 style={{ fontSize: 'var(--size-13)', lineHeight: 'var(--lh-13)', letterSpacing: 'var(--track-13)' }}
               >
                 {bullet}

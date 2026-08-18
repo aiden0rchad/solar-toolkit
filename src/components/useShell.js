@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from 'react';
 
 // =============================================================================
-// COUNTERFOIL — the shell contract.
+// INSTRUMENT — the shell contract.
 //
 // The page is a document: masthead, ruled index, a sticky context bar carrying
 // the premises, a main column and a 22rem marginalia rail. App owns the layout;

@@ -34,8 +34,10 @@ export default {
         rule: {
           DEFAULT: 'var(--rule)', //     1px division
           strong: 'var(--rule-strong)', // 2px division, active
-          heavy: 'var(--rule-heavy)', //   alias of rule-strong (legacy)
         },
+        // The resting edge of an interactive control — NOT a division. 3:1 on
+        // --surface in both themes, which --rule is not and is not meant to be.
+        'control-edge': 'var(--control-edge)',
         scrim: 'var(--scrim)', // modal backdrop
 
         // Data — the ONLY chroma in the system. Entity-stable, never
@@ -50,37 +52,30 @@ export default {
         // The irradiance ramp — the system's one SEQUENTIAL scale, and the
         // only other chroma allowed. Six ordinal stops, low -> high, for a
         // measured quantity: a month cell, a chart band, a readout tinted by
-        // its own magnitude. `bg-ir-3`, `text-ir-4`, `fill-ir-2`. Never on
-        // chrome — a ramp stop behind a panel or under a heading is the same
-        // violation an accent colour there would be. Stops are ordinal:
-        // consumers step to the nearest, never interpolate.
-        'ir-0': 'var(--ir-0)', // lowest
+        // its own magnitude. Never on chrome — a ramp stop behind a panel or
+        // under a heading is the same violation an accent colour there would
+        // be. Stops are ordinal: consumers step to the nearest, never
+        // interpolate.
+        //
+        // TWO SERIES, because a fill and a foreground owe different contrast.
+        // `ir-N` is the FILL scale — `bg-ir-3`, `fill-ir-2` — and its pale low
+        // end is the sanctioned sequential convention. `ir-t-N` is the
+        // FOREGROUND scale: the same hue path re-pitched so every stop clears
+        // 4.5:1 on --surface, and the only one a figure may wear. Write
+        // `text-ir-t-N`, never `text-ir-N`; the mapping lives once, in
+        // `toneForValue` (src/components/ui.jsx).
+        'ir-0': 'var(--ir-0)', // lowest fill
         'ir-1': 'var(--ir-1)',
         'ir-2': 'var(--ir-2)',
         'ir-3': 'var(--ir-3)',
         'ir-4': 'var(--ir-4)',
-        'ir-5': 'var(--ir-5)', // highest
-
-        // === COMPATIBILITY LAYER ===========================================
-        // Counterfoil names still used by components. They resolve through the
-        // aliases in src/index.css, so they now carry Instrument values. Do not
-        // add new consumers; collapse these onto the names above in a later
-        // pass and delete this block.
-        paper: 'var(--paper)', //   -> field
-        sunken: 'var(--sunken)', //  -> raised
-        hair: 'var(--hair)', //      -> rule
-        'chart-grid': 'var(--chart-grid)', // -> rule
-        baseline: 'var(--baseline)', //       -> rule-strong
-        mark: {
-          DEFAULT: 'var(--mark)', //  -> d-bad
-          wash: 'var(--mark-wash)', // -> raised (a chroma field would be decoration)
-        },
-        good: 'var(--good)', // -> d-good
-        bad: 'var(--bad)', //   -> d-bad
-        's-proposed': 'var(--s-proposed)', //               -> d-solar
-        's-baseline': 'var(--s-baseline)', //               -> d-grid
-        's-baseline-stroke': 'var(--s-baseline-stroke)', // -> d-grid
-        's-third': 'var(--s-third)', //                     -> d-third
+        'ir-5': 'var(--ir-5)', // highest fill
+        'ir-t-0': 'var(--ir-t-0)', // lowest foreground
+        'ir-t-1': 'var(--ir-t-1)',
+        'ir-t-2': 'var(--ir-t-2)',
+        'ir-t-3': 'var(--ir-t-3)',
+        'ir-t-4': 'var(--ir-t-4)',
+        'ir-t-5': 'var(--ir-t-5)', // highest foreground
       },
     },
   },

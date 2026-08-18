@@ -1,12 +1,72 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { PRO_URL } from '../entitlement/config';
 
+/**
+ * What `aria-modal` promises and what a dialog has to actually do.
+ *
+ * Declaring `role="dialog"` and `aria-modal="true"` tells a screen reader the
+ * rest of the page is inert. Nothing here made that true: focus stayed on the
+ * export button behind the scrim, TAB walked straight out of the sheet into a
+ * page that is still fully focusable, and closing left focus wherever the last
+ * click had put it. A reader was told a modal opened and then left reading the
+ * page underneath it.
+ *
+ * So the effect below does the three things the role is claiming. It moves
+ * focus into the sheet on mount; it keeps TAB and SHIFT+TAB inside the sheet's
+ * own focusable set, wrapping at both ends; and on unmount it returns focus to
+ * whatever opened the dialog, so closing puts the reader back on the control
+ * they pressed rather than at the top of the document.
+ *
+ * The focusable set is queried per keystroke rather than cached: it is at most
+ * four nodes, and a cached list goes stale the moment anything in the sheet
+ * renders conditionally.
+ */
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 const ProUpsellModal = ({ onClose }) => {
+  const sheetRef = useRef(null);
+
   useEffect(() => {
-    const closeOnEscape = event => event.key === 'Escape' && onClose();
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    const opener = document.activeElement;
+    const sheet = sheetRef.current;
+    sheet?.focus();
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !sheet) return;
+
+      const focusable = Array.from(sheet.querySelectorAll(FOCUSABLE));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        sheet.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      // `sheet` itself is tabindex="-1" and holds focus on mount, so the first
+      // TAB has to be steered explicitly — it would otherwise leave for the
+      // page behind the scrim.
+      if (!sheet.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
+    };
   }, [onClose]);
 
   return (
@@ -17,10 +77,12 @@ const ProUpsellModal = ({ onClose }) => {
           because this sheet genuinely floats above the page. It is cast in
           `--scrim`, so it is the same ink as the backdrop and carries no hue. */}
       <section
+        ref={sheetRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pro-upsell-title"
-        className="relative w-full max-w-md border-t-2 border-rule-heavy bg-overlay px-6 pb-7 pt-5"
+        className="relative w-full max-w-md border-t-2 border-rule-strong bg-overlay px-6 pb-7 pt-5 focus:outline-none"
         style={{ boxShadow: '0 24px 56px -16px var(--scrim)' }}
       >
         <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 bg-transparent p-1 text-ink-3 hover:text-ink"><X size={16} /></button>

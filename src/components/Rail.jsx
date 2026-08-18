@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useShell } from './useShell';
 
 /**
- * COUNTERFOIL — the marginalia rail.
+ * INSTRUMENT — the marginalia rail.
  *
  * Render sidenotes into the shell's 22rem outer column: assumption blocks,
  * footnote keys, disclosure reasons. Anything a figure on the sheet points at

@@ -22,9 +22,9 @@ const canUseDom = typeof window !== 'undefined' && typeof document !== 'undefine
 /**
  * CSS custom property -> key on the resolved token object. Instrument base
  * tokens only — one property per key, so nothing is read twice. Several older
- * keys are two names for one token (chart grid IS `--rule`, the axis baseline
- * IS `--rule-strong`); those are derived in `deriveAliases` below rather than
- * probed a second time.
+ * keys serve two roles (the chart grid IS `--rule`, the axis baseline IS
+ * `--rule-strong`); the builders below name the one token rather than probing
+ * it a second time under a second name.
  */
 const TOKEN_MAP = {
   // data — the only chroma
@@ -34,8 +34,8 @@ const TOKEN_MAP = {
   '--d-good': 'good',
   '--d-bad': 'bad',
   // data — the irradiance ramp, low irradiance to high. Six ordinal stops;
-  // `deriveAliases` gathers them into `ramp` so a consumer indexes an array
-  // instead of six keys.
+  // `derive` gathers them into `ramp` so a consumer indexes an array instead
+  // of six keys.
   '--ir-0': 'ir0',
   '--ir-1': 'ir1',
   '--ir-2': 'ir2',
@@ -57,19 +57,15 @@ const TOKEN_MAP = {
 };
 
 /**
- * Keys that are a second name for a token already resolved above. Kept so the
- * builders and the legacy exports below need no rename; they are the
- * compatibility layer of src/index.css, expressed in JS.
+ * The two derived keys. Everything else on the token object is a base
+ * Instrument token under its own name — the Counterfoil alias layer this file
+ * used to mirror in JS (`grid`, `axis`, `hair`, `ruleHeavy`, `mark`, `paper`,
+ * `sunken`) is gone, and the builders below name `rule` / `ruleStrong` /
+ * `bad` / `field` / `raised` directly.
  */
-function deriveAliases(t) {
-  t.grid = t.rule; //           gridlines
-  t.axis = t.ruleStrong; //     axis baseline
-  t.hair = t.rule; //           the old sub-1px weight
-  t.ruleHeavy = t.ruleStrong; // the 2px weight
-  t.baselineFill = t.baselineStroke; // --d-grid; the baseline carries no fill
-  t.mark = t.bad; //            the struck-row rule
-  t.sunken = t.raised;
-  t.paper = t.field;
+function derive(t) {
+  // --d-grid; the do-nothing baseline carries no fill, so fill IS the stroke.
+  t.baselineFill = t.baselineStroke;
   // The sequential scale as an array, low -> high. Built here rather than
   // probed a seventh time: these are the same six values already resolved.
   t.ramp = [t.ir0, t.ir1, t.ir2, t.ir3, t.ir4, t.ir5];
@@ -127,7 +123,7 @@ export function readChartTokens() {
     // No document to read. There is nothing truthful to return, and inventing a
     // palette here is precisely the second source of truth this file exists to
     // prevent. The app is client-only; this branch is defensive.
-    cache = deriveAliases(
+    cache = derive(
       Object.fromEntries(Object.values(TOKEN_MAP).map((key) => [key, ''])),
     );
     cache.washOpacity = 0.12;
@@ -157,7 +153,7 @@ export function readChartTokens() {
 
   const wash = Number.parseFloat(tokens.washOpacity);
   tokens.washOpacity = Number.isFinite(wash) ? wash : 0.12;
-  cache = deriveAliases(tokens);
+  cache = derive(tokens);
   return cache;
 }
 
@@ -309,7 +305,7 @@ export const axisTickOf = (t) => ({ fontSize: 11, fill: t.ink3, className: 'tnum
 
 /** <CartesianGrid />. Horizontal only, SOLID hairline — dashed means annotation. */
 export const gridPropsOf = (t) => ({
-  stroke: t.grid,
+  stroke: t.rule,
   strokeDasharray: '0',
   vertical: false,
   horizontal: true,
@@ -317,16 +313,16 @@ export const gridPropsOf = (t) => ({
 
 /** <XAxis />. A baseline rule, no tick marks. */
 export const xAxisPropsOf = (t) => ({
-  stroke: t.axis,
+  stroke: t.ruleStrong,
   tickLine: false,
-  axisLine: { stroke: t.axis },
+  axisLine: { stroke: t.ruleStrong },
   tick: axisTickOf(t),
 });
 
 /** <YAxis />. Figures sit in a right-hand column, as on a bill. No axis line. */
 export const yAxisPropsOf = (t) => ({
   orientation: 'right',
-  stroke: t.axis,
+  stroke: t.ruleStrong,
   tickLine: false,
   axisLine: false,
   tick: axisTickOf(t),
@@ -334,14 +330,14 @@ export const yAxisPropsOf = (t) => ({
 
 /**
  * <Tooltip />. A small floating sheet on --overlay: introduced by the same 2px
- * `--rule-heavy` every other sheet is introduced by, and carrying no border on
+ * `--rule-strong` every other sheet is introduced by, and carrying no border on
  * its other three sides, because containers here have no borders.
  */
 export const tooltipPropsOf = (t) => ({
   contentStyle: {
     background: t.overlay,
     border: 0,
-    borderTop: `2px solid ${t.ruleHeavy}`,
+    borderTop: `2px solid ${t.ruleStrong}`,
     borderRadius: 0,
     boxShadow: 'none',
     padding: '6px 9px 7px',
@@ -350,13 +346,13 @@ export const tooltipPropsOf = (t) => ({
   },
   labelStyle: { color: t.ink, fontWeight: 600, marginBottom: 3 },
   itemStyle: { color: t.ink2, fontSize: 12, padding: 0 },
-  cursor: { stroke: t.axis, strokeWidth: 1 },
+  cursor: { stroke: t.ruleStrong, strokeWidth: 1 },
 });
 
 /** Same tooltip with a bar cursor: a faint wash of the sheet, not a line. */
 export const barTooltipPropsOf = (t) => ({
   ...tooltipPropsOf(t),
-  cursor: { fill: t.hair, fillOpacity: 0.55 },
+  cursor: { fill: t.rule, fillOpacity: 0.55 },
 });
 
 /** <Legend />. Required on any chart with 2+ series; text never wears a hue. */
@@ -452,10 +448,7 @@ export let annotationLine = annotationLineOf(tokens);
 export let annotationLabel = annotationLabelOf(tokens);
 export let barProps = barPropsOf(tokens);
 
-/**
- * Series colours by role. `solar` / `grid` are the legacy names for
- * `proposed` / `baseline`; both point at the same tokens.
- */
+/** Series colours by role. Entity-stable; see SERIES_ROLES. */
 export let SERIES = seriesOf(tokens);
 
 function seriesOf(t) {
@@ -464,33 +457,8 @@ function seriesOf(t) {
     baseline: t.baselineStroke,
     baselineFill: t.baselineFill,
     third: t.third,
-    // legacy aliases
-    solar: t.proposed,
-    grid: t.baselineStroke,
   };
 }
-
-// Legacy scalar names, kept live so nothing breaks mid-flight.
-export let INK = tokens.ink;
-export let INK_2 = tokens.ink2;
-export let INK_3 = tokens.ink3;
-export let GRID = tokens.grid;
-export let BASELINE = tokens.axis;
-export let SURFACE = tokens.surface;
-export let OVERLAY = tokens.overlay;
-export let HAIR = tokens.hair;
-export let RULE = tokens.rule;
-export let MARK = tokens.mark;
-export let LINE = tokens.rule;
-export let gridStroke = tokens.grid;
-export let axisStroke = tokens.axis;
-export let areaFillOpacity = tokens.washOpacity;
-/** Legacy tooltip names. `darkTooltip` predates the token system. */
-export let chartTooltip = tooltipProps;
-export let barTooltip = barTooltipProps;
-export let darkTooltip = tooltipProps;
-/** Legacy <Area /> bundle. Prefer `proposedLine` / `baselineLine`. */
-export let areaProps = { ...linePropsOf(tokens), fillOpacity: tokens.washOpacity };
 
 function rebuild(t) {
   tokens = t;
@@ -510,25 +478,6 @@ function rebuild(t) {
   barProps = barPropsOf(t);
 
   SERIES = seriesOf(t);
-
-  INK = t.ink;
-  INK_2 = t.ink2;
-  INK_3 = t.ink3;
-  GRID = t.grid;
-  BASELINE = t.axis;
-  SURFACE = t.surface;
-  OVERLAY = t.overlay;
-  HAIR = t.hair;
-  RULE = t.rule;
-  MARK = t.mark;
-  LINE = t.rule;
-  gridStroke = t.grid;
-  axisStroke = t.axis;
-  areaFillOpacity = t.washOpacity;
-  chartTooltip = tooltipProps;
-  barTooltip = barTooltipProps;
-  darkTooltip = tooltipProps;
-  areaProps = { ...linePropsOf(t), fillOpacity: t.washOpacity };
 }
 
 /**

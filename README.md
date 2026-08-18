@@ -6,6 +6,13 @@ Free solar, battery, and EV calculators that run entirely in your browser.
 
 [![SolarPro Toolkit](docs/media/landing.png)](https://aiden0rchad.github.io/solar-toolkit/)
 
+It runs in dark or light, following your system by default. Everything you see is real output from the same engine the calculators use, computed in your browser as the page loads.
+
+| | |
+|---|---|
+| ![Solar savings](docs/media/simple-roi.png) | ![EV switch](docs/media/ev-switch.png) |
+| ![Bill decoder, light theme](docs/media/bill-decoder.png) | ![Blackout simulator](docs/media/blackout.png) |
+
 Most solar calculators online are lead generators. They exist to make solar look good so you'll leave your phone number. This one is just the math. Sometimes the math says yes, sometimes it says keep your money, and I think a calculator should be fine with either answer.
 
 If this tool helps you, please consider donating. I'm a university student and the job market is really bad right now, so every bit genuinely helps.
@@ -73,7 +80,11 @@ npm test
 npm run build
 ```
 
-React 18, Vite 5, Tailwind 3, Recharts, lucide-react. Plain JSX, no TypeScript, no backend. The math lives in `src/engine/` as pure, tested functions, and tools register themselves in `src/tools/registry.jsx`.
+React 18, Vite 5, Tailwind 3, Recharts. Plain JSX, no TypeScript, no backend. The math lives in `src/engine/` as pure, tested functions, and tools register themselves in `src/tools/registry.jsx`.
+
+The design system is documented in [DESIGN.md](DESIGN.md) and it is worth reading before changing anything visual. The short version: colour is reserved for data. Panels, rules, labels and navigation are grey on purpose, so a number that means something is the only thing on screen that glows, and it does that without a single shadow or blur. Both themes are defined once with `light-dark()`, and the chart colours resolve at runtime so a theme switch repaints the plots correctly.
+
+Fonts are Archivo and Spline Sans Mono, self hosted and subset from their variable sources with the OpenType features kept. That matters more than it sounds: the builds Google Fonts serves strip the tabular figure and slashed zero features, and a ledger full of numbers needs both.
 
 ## License
 

@@ -1,96 +1,129 @@
 import { useMemo, useState } from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Plus } from 'lucide-react';
 import { MARKERS } from '../components/markers';
-import { Card, Figure, InputField, Marker, Perforation } from '../components/ui';
+import { Card, Figure, InputField, Marker, Perforation, toneForValue } from '../components/ui';
 import { useChartTheme } from '../components/chartTheme';
-import { Rail } from '../components/Rail';
+import Rail from '../components/Rail';
 import { usePremises } from '../components/useShell';
 import { batteryPresets } from '../data/batteryPresets';
 
 // =============================================================================
-// COUNTERFOIL — Blackout Simulator.
+// INSTRUMENT — Blackout Simulator.
 //
-// A split pane: what you switch on is set as a ruled schedule of line items on
-// the left, what it costs you in runtime is the figure column on the right.
-// There are no boxes here — a sheet is introduced by its 2px rule, rows are
-// separated by hairlines, and every wattage sits in a right-aligned tabular
-// column with its unit named once at the head, the way a bill names it.
+// A split pane read as a faceplate: what you switch on is a ruled schedule of
+// line items on the left, pinned; what it costs you in runtime is the live
+// figure column on the right. There are no boxes — a sheet is introduced by its
+// 2px rule, rows are separated by 1px rules, and every wattage sits in a
+// right-aligned tabular column with its unit named once at the head.
 //
-// The premises the hours figure rests on go to the context bar; the model's own
-// assumptions go to the marginalia rail, keyed to the figures by footnote
-// marker. Neither lives in a tooltip.
+// THE ONE RULE holds. The only chroma on this sheet is measured: the runtime
+// readout, which takes its hue from its own magnitude on the irradiance ramp,
+// and the single plotted depletion series in `--d-solar`, which is the battery.
+// Everything else — the section numbers, the column heads, the preset index,
+// the appliance rows, the checkboxes, the gridlines, the depletion annotation —
+// is achromatic. SELECTION IS CHROME: a chosen preset is a 2px `--rule-strong`
+// underline and `--ink`, never a tint, and the toggles are native boxes with
+// `accent-color: var(--ink)`.
+//
+// The premises the runtime figure rests on go to the sticky context bar; the
+// model's own assumptions go to the marginalia rail, keyed to the figures by
+// footnote marker. Neither lives in a tooltip.
 // =============================================================================
 
-/** `01 BATTERY SYSTEM` — the ordinal sits condensed in the margin of its head. */
-const SectionHead = ({ n, children }) => (
-  <div className="mb-4 flex items-baseline gap-3">
-    <span
-      className="tnum flex-none text-ink-3"
-      style={{ fontSize: 'var(--size-12)', lineHeight: 'var(--lh-12)', letterSpacing: 'var(--track-12)', fontStretch: '75%' }}
-    >
-      {String(n).padStart(2, '0')}
-    </span>
-    <h3 className="eyebrow text-ink">{children}</h3>
+/** The simulation horizon, and therefore the domain the runtime is inked in. */
+const HORIZON_HOURS = 96;
+
+/**
+ * One step of the bi-modal scale — size, leading and tracking together. They
+ * are a set; taking a size without its leading is how a readout ends up
+ * wearing body line-height.
+ */
+const typeAt = (step) => ({
+  fontSize: `var(--size-${step})`,
+  lineHeight: `var(--lh-${step})`,
+  letterSpacing: `var(--track-${step})`,
+});
+
+/**
+ * The unit beside a readout: 0.4× the figure it qualifies, in mono, `--ink-3`.
+ * `line-height: 1` so it sits on the figure's baseline instead of dragging the
+ * display leading down with it.
+ */
+const unitAt = (step) => ({
+  fontSize: `calc(var(--size-${step}) * 0.4)`,
+  lineHeight: 1,
+});
+
+/** 11px footnote — the voice everything secondary speaks in on this sheet. */
+const footnote = typeAt(11);
+
+/** 13px line-item body. */
+const lineItem = typeAt(13);
+
+/**
+ * A numbered section head. The numeral is set in mono so it reads as an index
+ * key rather than a quantity, and never enters the tabular figure column.
+ */
+const SectionHead = ({ number, children, className = '', as: Tag = 'h3' }) => (
+  <div className={`flex items-baseline gap-2 ${className}`}>
+    <span className="font-mono text-ink-3" style={footnote}>{number}</span>
+    <Tag className="eyebrow">{children}</Tag>
   </div>
 );
 
 /**
- * One ruled line item in the results column. The figure is tabular and
- * right-aligned; the unit follows in Spline Sans Mono at 0.74× in `--ink-3`,
- * set in a fixed-width cell so `W` and `kWh` do not knock the figures out of
- * their column.
+ * A READOUT BLOCK — the unit this instrument reports in.
+ *
+ * Micro-label above in mono; the figure in Archivo condensed heavy, tabular;
+ * the unit in mono at 0.4× in `--ink-3`, so the quantity is the only thing
+ * carrying weight. `step` picks the run: 56 for the one figure the reader came
+ * for, 28 for the supporting cluster.
+ *
+ * `tone` takes the figure's hue from the figure's OWN magnitude — a ramp token
+ * class from `toneForValue`, applied to the figure alone. The micro-label, the
+ * marker and the unit stay achromatic, because they are chrome; only the number
+ * is a measurement. Without a `tone` the figure is `--ink`.
  */
-const StatRow = ({ label, marker, value, unit }) => (
-  <div className="flex items-baseline justify-between gap-4 border-b-[0.5px] border-hair py-1.5">
-    <dt
-      className="text-ink-2"
-      style={{ fontSize: 'var(--size-13)', lineHeight: 'var(--lh-13)', letterSpacing: 'var(--track-13)' }}
-    >
+const Readout = ({ label, marker, value, unit, step = 28, stretch = '68%', weight = 700, tone }) => (
+  <div className="min-w-0">
+    <div className="eyebrow">
       {label}
       <Marker symbol={marker} />
-    </dt>
-    <dd
-      className="tnum flex-none text-ink"
-      style={{ fontSize: 'var(--size-13)', lineHeight: 'var(--lh-13)', letterSpacing: 'var(--track-13)' }}
-    >
-      {value}
+    </div>
+    <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
       <span
-        className="ml-1.5 inline-block w-8 text-left font-mono text-ink-3"
-        style={{ fontSize: 'calc(var(--size-13) * 0.74)' }}
+        className={`tnum ${tone ?? 'text-ink'}`}
+        style={{ ...typeAt(step), fontStretch: stretch, fontWeight: weight }}
       >
-        {unit}
+        {value}
       </span>
-    </dd>
+      {unit && <span className="font-mono text-ink-3" style={unitAt(step)}>{unit}</span>}
+    </div>
   </div>
 );
 
 /** One sidenote in the rail: `term · value`, ruled, keyed by marker. */
 const Note = ({ term, symbol, children }) => (
-  <div className="flex items-baseline justify-between gap-4 border-b-[0.5px] border-hair py-1">
-    <dt
-      className="text-ink-2"
-      style={{ fontSize: 'var(--size-12)', lineHeight: 'var(--lh-12)', letterSpacing: 'var(--track-12)' }}
-    >
+  <div className="flex items-baseline justify-between gap-4 border-b border-rule py-1">
+    <dt className="text-ink-2" style={typeAt(12)}>
       {term}
       <Marker symbol={symbol} />
     </dt>
-    <dd
-      className="tnum flex-none text-ink"
-      style={{ fontSize: 'var(--size-12)', lineHeight: 'var(--lh-12)', letterSpacing: 'var(--track-12)' }}
-    >
+    <dd className="tnum flex-none text-ink" style={typeAt(12)}>
       {children}
     </dd>
   </div>
 );
 
 /** The schedule's column grid — head and rows share it so the figures line up. */
-const LOAD_GRID = 'grid grid-cols-[0.95rem_minmax(0,1fr)_4.5rem_3.5rem_1.5rem] items-center gap-x-3';
-
-const bodyType = { fontSize: 'var(--size-13)', lineHeight: 'var(--lh-13)', letterSpacing: 'var(--track-13)' };
+const LOAD_GRID = 'grid grid-cols-[0.9rem_minmax(0,1fr)_4rem_3.25rem_1.4rem] items-center gap-x-2.5';
 
 /** A borderless field: one rule underneath, `--field` only under focus. */
-const inlineField = 'h-9 border-0 border-b border-rule bg-transparent pb-1 pl-0 pt-1 font-sans text-ink placeholder:text-ink-3 focus:bg-field';
+const inlineField = 'h-9 border-0 border-b border-control-edge bg-transparent pb-1 pl-0 pt-1 font-sans text-ink placeholder:text-ink-3 focus:bg-field';
+
+/** Selection is chrome, so the box is inked in `--ink` and never in a hue. */
+const checkbox = { accentColor: 'var(--ink)' };
 
 const integer = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString() : '—');
 const decimal = (n) => (Number.isFinite(n) ? String(n) : '—');
@@ -131,7 +164,7 @@ const BlackoutSimulator = ({ onExport }) => {
     let soc = usableWh;
     const trace = [{ hour: 0, remaining: 100 }];
     let solarWhTotal = 0;
-    for (let h = 1; h <= 96; h++) {
+    for (let h = 1; h <= HORIZON_HOURS; h++) {
       const clock = (18 + h) % 24; // outage starts at 6 PM
       const solarW = solarRecharge && clock >= 7 && clock <= 19
         ? solarOutput * 1000 * 0.75 * Math.sin(Math.PI * (clock - 7) / 12)
@@ -141,14 +174,27 @@ const BlackoutSimulator = ({ onExport }) => {
       trace.push({ hour: h, remaining: Math.max(0, Math.round((soc / usableWh) * 100)) });
       if (soc <= 0) return { hours: h, trace, avgSolarW: solarWhTotal / h };
     }
-    return { hours: null, trace, avgSolarW: solarWhTotal / 96 };
+    return { hours: null, trace, avgSolarW: solarWhTotal / HORIZON_HOURS };
   }, [batterySize, totalWatts, solarRecharge, solarOutput]);
 
   const estimatedHours = totalWatts <= 0 ? '∞' : sim.hours === null ? '96+' : String(sim.hours);
   const netDraw = Math.max(0, totalWatts - sim.avgSolarW);
   const depletionData = sim.trace;
 
-  const { gridProps, xAxisProps, yAxisProps, tooltipProps, proposedLine } = useChartTheme();
+  // Series and chrome for the theme actually on screen — resolved at runtime,
+  // never a hex in this file.
+  const chart = useChartTheme();
+
+  // The runtime is the measured quantity on this sheet, so the hero figure is
+  // inked by its own magnitude across the horizon the model actually ran: an
+  // outage the battery rides out entirely sits at the warm end, and a load that
+  // flattens it in an hour sits at the cool one. A configuration that draws
+  // nothing never runs down, so it reads as the whole horizon.
+  const runtimeTone = toneForValue(
+    totalWatts <= 0 ? HORIZON_HOURS : sim.hours ?? HORIZON_HOURS,
+    0,
+    HORIZON_HOURS,
+  );
 
   // --- marginalia ----------------------------------------------------------
   // The model's own premises, printed on the page. Markers run in house order
@@ -174,54 +220,69 @@ const BlackoutSimulator = ({ onExport }) => {
     ],
   });
 
+  // The supporting run, each its own readout block with its own unit — never a
+  // row of stat cells. Figures here carry no tone: they are the inputs the
+  // runtime is made of, not the reading, and only the reading is inked.
+  const readouts = [
+    { label: 'Total Load', value: integer(totalWatts), unit: 'W' },
+    { label: 'Battery', marker: markerFor('usable'), value: decimal(batterySize), unit: 'kWh' },
+    ...(solarRecharge
+      ? [{
+        label: 'Solar Offset · 24h avg',
+        marker: markerFor('window'),
+        value: `~${integer(sim.avgSolarW)}`,
+        unit: 'W',
+      }]
+      : []),
+    { label: 'Net Draw', value: integer(netDraw), unit: 'W' },
+  ];
+
   return (
     <div>
-      <header className="mb-9">
-        <h2
-          className="font-semibold text-ink"
-          style={{ fontSize: 'var(--size-28)', lineHeight: 'var(--lh-28)', letterSpacing: 'var(--track-28)' }}
-        >
+      <header className="mb-7">
+        <p className="eyebrow">Backup · hour by hour</p>
+        {/* The masthead carries the page <h1>; every view heads at h2. */}
+        <h2 className="mt-1 font-semibold text-ink" style={{ ...typeAt(28), fontStretch: '75%' }}>
           Blackout Simulator
         </h2>
-        <p
-          className="mt-2 max-w-[46em] text-ink-2"
-          style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}
-        >
+        <p className="mt-1.5 max-w-[52ch] text-ink-2" style={typeAt(15)}>
           Choose what you want to keep running and see how long your battery lasts.
         </p>
       </header>
 
-      {/* SPLIT PANE — what you switch on, left and sticky; what it costs you in
-          runtime, right and live. */}
-      <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-12">
-        <div className="space-y-8 lg:col-span-7 lg:sticky lg:top-14 lg:self-start">
-          <Card>
-            <SectionHead n={1}>Battery System</SectionHead>
+      {/* SPLIT PANE — what you switch on, left and pinned; what it costs you in
+          runtime, right and live. The reader never loses the schedule while
+          reading the figure it produced. */}
+      <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[26rem_minmax(0,1fr)]">
+        <section
+          aria-label="Your inputs"
+          className="space-y-8 lg:sticky lg:top-14 lg:max-h-[calc(100vh_-_4.5rem)] lg:self-start lg:overflow-y-auto"
+        >
+          <Card className="px-5 pb-6 pt-4">
+            <SectionHead number="01" className="mb-4">Battery System</SectionHead>
 
             {/* Presets as a ruled index. The chosen one carries the 2px rule;
-                the others carry none — nothing fills, nothing rounds. */}
+                the others carry none — nothing fills, nothing rounds, and
+                nothing takes a hue, because selection is chrome. */}
             <div className="mb-5 overflow-x-auto">
-              <div className="flex min-w-max items-stretch gap-x-6 border-b-[0.5px] border-hair">
-              {batteryPresets.map(p => {
-                const selected = preset === p.label;
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => { setPreset(p.label); setBatterySize(p.kwh); }}
-                    className={`-mb-px flex flex-none items-baseline gap-1.5 border-b-2 bg-transparent px-0 pb-2 pt-1 ${selected ? 'border-rule-heavy' : 'border-transparent'}`}
-                  >
-                    <span className={`eyebrow ${selected ? 'text-ink' : 'text-ink-3'}`}>{p.label}</span>
-                    <span
-                      className={`tnum ${selected ? 'text-ink' : 'text-ink-3'}`}
-                      style={{ fontSize: 'var(--size-11)', lineHeight: 'var(--lh-11)', letterSpacing: 'var(--track-11)' }}
+              <div className="flex min-w-max items-stretch gap-x-6 border-b border-rule">
+                {batteryPresets.map(p => {
+                  const selected = preset === p.label;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => { setPreset(p.label); setBatterySize(p.kwh); }}
+                      className={`-mb-px flex flex-none items-baseline gap-1.5 border-b-2 bg-transparent px-0 pb-2 pt-1 ${selected ? 'border-rule-strong' : 'border-transparent'}`}
                     >
-                      {p.kwh}
-                    </span>
-                  </button>
-                );
-              })}
+                      <span className={`eyebrow ${selected ? 'text-ink' : 'text-ink-3'}`}>{p.label}</span>
+                      <span className={`tnum ${selected ? 'text-ink' : 'text-ink-3'}`} style={typeAt(11)}>
+                        {p.kwh}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -233,12 +294,13 @@ const BlackoutSimulator = ({ onExport }) => {
               step="0.5"
             />
 
-            <label className="flex cursor-pointer items-center justify-between gap-3 border-b-[0.5px] border-hair py-2.5">
-              <span className="text-ink-2" style={bodyType}>Solar During Outage?</span>
+            <label className="flex cursor-pointer items-center justify-between gap-3 border-b border-rule py-2.5">
+              <span className="text-ink-2" style={lineItem}>Solar During Outage?</span>
               <input
                 type="checkbox"
                 checked={solarRecharge}
                 onChange={(e) => setSolarRecharge(e.target.checked)}
+                style={checkbox}
                 className="h-3.5 w-3.5 shrink-0"
               />
             </label>
@@ -250,8 +312,8 @@ const BlackoutSimulator = ({ onExport }) => {
             )}
           </Card>
 
-          <Card>
-            <SectionHead n={2}>Active Appliances</SectionHead>
+          <Card className="px-5 pb-6 pt-4">
+            <SectionHead number="02" className="mb-4">Active Appliances</SectionHead>
 
             {/* Column heads. The unit is named once, at the head of the figure
                 column — never repeated down the rows. */}
@@ -266,28 +328,28 @@ const BlackoutSimulator = ({ onExport }) => {
             <ul className="max-h-[320px] overflow-y-auto">
               {activeLoads.map(load => (
                 <li key={load.id}>
-                  <label className={`${LOAD_GRID} cursor-pointer border-b-[0.5px] border-hair py-2`}>
+                  <label className={`${LOAD_GRID} cursor-pointer border-b border-rule py-2`}>
                     <input
                       type="checkbox"
                       checked={load.active}
                       onChange={() => toggleLoad(load.id)}
+                      style={checkbox}
                       className="h-3.5 w-3.5 shrink-0"
                     />
-                    <span className={`truncate ${load.active ? 'text-ink' : 'text-ink-3'}`} style={bodyType}>
+                    <span className={`truncate ${load.active ? 'text-ink' : 'text-ink-3'}`} style={lineItem}>
                       {load.name}
                     </span>
-                    <span
-                      className="truncate text-ink-3"
-                      style={{ fontSize: 'var(--size-11)', lineHeight: 'var(--lh-11)', letterSpacing: 'var(--track-11)' }}
-                    >
+                    <span className="truncate text-ink-3" style={typeAt(11)}>
                       {load.category}
                     </span>
                     <span
                       className={`tnum text-right ${load.active ? 'text-ink' : 'text-ink-3'}`}
-                      style={bodyType}
+                      style={lineItem}
                     >
                       {load.watts.toLocaleString()}
                     </span>
+                    {/* The state is spelled, not tinted: a live row survives
+                        greyscale on the word and the ink weight alone. */}
                     <span className="eyebrow text-right">{load.active ? 'ON' : ''}</span>
                   </label>
                 </li>
@@ -302,7 +364,7 @@ const BlackoutSimulator = ({ onExport }) => {
                 aria-label="Name"
                 value={customName}
                 onChange={e => setCustomName(e.target.value)}
-                style={bodyType}
+                style={lineItem}
                 className={`flex-1 ${inlineField}`}
               />
               <input
@@ -311,94 +373,121 @@ const BlackoutSimulator = ({ onExport }) => {
                 aria-label="Watts"
                 value={customWatts}
                 onChange={e => setCustomWatts(e.target.value)}
-                style={bodyType}
+                style={lineItem}
                 className={`tnum w-24 text-right ${inlineField} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
               />
               <button
                 type="button"
                 onClick={addCustom}
                 aria-label="Add appliance"
-                className="flex h-9 w-9 shrink-0 items-center justify-center border-b-2 border-rule-heavy bg-transparent text-ink-2 hover:text-ink"
+                className="flex h-9 w-9 shrink-0 items-center justify-center border-b-2 border-rule-strong bg-transparent text-ink-2 hover:text-ink"
               >
                 <Plus size={15} aria-hidden="true" />
               </button>
             </div>
           </Card>
-        </div>
+        </section>
 
-        <div className="lg:col-span-5">
-          <Card>
-            <SectionHead n={3}>Estimated Runtime</SectionHead>
+        <section aria-label="Your estimate" className="min-w-0">
+          <Card className="px-5 pb-6 pt-4">
+            <SectionHead number="03">Estimated Runtime</SectionHead>
 
-            {/* THE HERO. Archivo condensed, heavy, at the top of the display
-                run — the one figure the reader came for. */}
-            <div className="flex items-baseline gap-2.5">
-              <span
-                className="tnum text-ink"
-                style={{
-                  fontSize: 'var(--size-56)',
-                  lineHeight: 'var(--lh-56)',
-                  letterSpacing: 'var(--track-56)',
-                  fontWeight: 800,
-                  fontStretch: '62%',
-                }}
-              >
-                {estimatedHours}
-              </span>
-              <span className="font-mono text-ink-3" style={{ fontSize: 'calc(var(--size-56) * 0.74)', lineHeight: 1 }}>
-                Hours
-              </span>
+            {/* THE PRIMARY READOUT. Archivo condensed heavy at the top of the
+                display run, its unit in mono at 0.4× — the one figure the
+                reader came for, and the only figure on the sheet entitled to a
+                hue, because the runtime IS the measurement. */}
+            <div className="mt-2.5 border-b-2 border-rule-strong pb-1.5">
+              <Readout
+                label="Runtime"
+                value={estimatedHours}
+                unit="hrs"
+                step={56}
+                stretch="62%"
+                weight={800}
+                tone={runtimeTone}
+              />
             </div>
 
-            <dl className="mt-6">
-              <StatRow label="Total Load" value={integer(totalWatts)} unit="W" />
-              <StatRow label="Battery" marker={markerFor('usable')} value={decimal(batterySize)} unit="kWh" />
-              {solarRecharge && (
-                <StatRow
-                  label="Solar Offset (24h avg)"
-                  marker={markerFor('window')}
-                  value={`~${integer(sim.avgSolarW)}`}
-                  unit="W"
-                />
-              )}
-              <StatRow label="Net Draw" value={integer(netDraw)} unit="W" />
-            </dl>
+            {/* THE READOUT CLUSTER — ruled, not carded. One 1px rule between
+                blocks and one under the group; no boxes, no padding wells. */}
+            <div
+              className={`grid grid-cols-1 divide-y divide-rule border-b border-rule sm:divide-x sm:divide-y-0 ${
+                readouts.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'
+              }`}
+            >
+              {readouts.map((readout, i) => (
+                <div key={readout.label} className={`py-3 ${i === 0 ? 'sm:pr-4' : 'sm:px-4'}`}>
+                  <Readout {...readout} />
+                </div>
+              ))}
+            </div>
 
             {depletionData.length > 0 && (
-              <div className="mt-8">
-                <Figure
-                  number={1}
-                  caption={<>Battery Depletion<Marker symbol={markerFor('horizon')} /> — usable capacity remaining on the proposed battery, hour by hour</>}
-                  className="mb-2"
-                />
-                <div className="h-44 w-full">
+              <>
+                <hr className="rule-strong mt-8" />
+                <SectionHead number="04" className="mt-2.5">Battery Depletion</SectionHead>
+
+                <div className="mt-3.5 h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={depletionData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                      <CartesianGrid {...gridProps} />
-                      <XAxis dataKey="hour" {...xAxisProps} tickFormatter={v => `${v}h`} />
-                      <YAxis {...yAxisProps} width={40} domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                      <Tooltip {...tooltipProps} formatter={v => `${v}%`} labelFormatter={v => `Hour ${v}`} />
-                      {/* One series, so no legend: the caption names it. */}
-                      <Area type="monotone" dataKey="remaining" {...proposedLine} />
+                    <AreaChart data={depletionData} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
+                      {/* Gridlines: horizontal only, solid hairline. A dashed
+                          rule in this system means annotation. */}
+                      <CartesianGrid {...chart.gridProps} />
+                      <XAxis
+                        {...chart.xAxisProps}
+                        dataKey="hour"
+                        type="number"
+                        domain={[0, 'dataMax']}
+                        allowDecimals={false}
+                        tickFormatter={v => `${v}h`}
+                      />
+                      <YAxis {...chart.yAxisProps} width={44} domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                      <Tooltip {...chart.tooltipProps} formatter={v => `${v}%`} labelFormatter={v => `Hour ${v}`} />
+                      {/* ONE series, so no legend: the numbered caption below
+                          names it. `--d-solar` is the battery, app-wide, and
+                          the 2px solid stroke over its wash is the redundant
+                          encoding that keeps the plot readable in greyscale. */}
+                      <Area {...chart.proposedLine} type="monotone" dataKey="remaining" name="Usable capacity remaining" />
+                      {/* The hour the battery empties — a measured threshold,
+                          but drawn as ANNOTATION: dashed hairline in --ink-3,
+                          achromatic, because the marker is chrome pointing at
+                          the reading rather than the reading itself. */}
+                      {sim.hours !== null && (
+                        <ReferenceLine
+                          {...chart.annotationLine}
+                          x={sim.hours}
+                          label={{ ...chart.annotationLabel, value: `Empty · ${sim.hours} h`, position: 'top' }}
+                        />
+                      )}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+                <Figure number={1} className="mt-2 max-w-[60ch]">
+                  Usable capacity remaining on the battery<Marker symbol={markerFor('usable')} />, hour by hour from
+                  the start of the outage<Marker symbol={markerFor('start')} /> to the end of the simulation
+                  horizon<Marker symbol={markerFor('horizon')} />.
+                </Figure>
+              </>
             )}
 
+            <hr className="rule mt-7" />
             <button
               type="button"
               onClick={() => onExport({ batterySize, totalWatts, estimatedHours: parseFloat(estimatedHours) || 0, activeLoads: activeLoads.filter(l => l.active), solarRecharge, netDraw })}
-              className="eyebrow mt-8 w-full bg-ink px-5 py-3 text-center text-surface hover:bg-ink-2 print:hidden"
+              className="eyebrow mt-6 w-full bg-ink px-5 py-3 text-center text-surface hover:bg-ink-2 print:hidden"
             >
               Export to Proposal
             </button>
           </Card>
-        </div>
+        </section>
       </div>
 
+      {/* The assumptions are marginalia, in the margin where assumptions live —
+          never in a tooltip. Every note is keyed to the figure it governs by
+          the marker beside it, so a reader following a symbol up from the sheet
+          lands on the premise that produced the number. */}
       <Rail>
-        <aside className="hair pt-4">
+        <aside className="rule pt-4">
           <Perforation className="mb-4" label="Assumptions follow" />
           <h3 className="eyebrow mb-2">Assumptions behind these numbers</h3>
           <dl>
@@ -408,10 +497,7 @@ const BlackoutSimulator = ({ onExport }) => {
               </Note>
             ))}
           </dl>
-          <p
-            className="mt-4 text-ink-3"
-            style={{ fontSize: 'var(--size-11)', lineHeight: 'var(--lh-11)', letterSpacing: 'var(--track-11)' }}
-          >
+          <p className="mt-4 text-ink-3" style={footnote}>
             This is an estimate, not a quote or guarantee. Actual utility rates, production, usage, financing, and incentives can change your results.
           </p>
         </aside>

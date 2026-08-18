@@ -3,12 +3,12 @@ import { Battery, Sun } from 'lucide-react';
 import { RAMP_STOPS, rampIndexFor } from './chartTheme';
 
 // =============================================================================
-// COUNTERFOIL — shared primitives.
+// INSTRUMENT — shared primitives.
 //
 // The grammar every tool inherits: no boxes, no radius, no shadow, no accent.
 // Hierarchy is carried by three rule weights (0.5 / 1 / 2px) and by type size,
 // weight and width, the way a bill carries it. Colour arrives only through
-// token classes (`bg-surface`, `text-ink-3`, `border-rule-heavy`); there is
+// token classes (`bg-surface`, `text-ink-3`, `border-rule-strong`); there is
 // never a hex in this file.
 // =============================================================================
 
@@ -41,7 +41,7 @@ const hasPadding = (className) => /(?:^|\s)-?p[xytrbles]?-/.test(className);
  * SHEET (exported as `Card` — tools import that name).
  *
  * Not a card: no border, no radius, no shadow, no clipping. A sheet is a
- * section of a document, introduced by a 2px `--rule-heavy` top rule and given
+ * section of a document, introduced by a 2px `--rule-strong` top rule and given
  * room to breathe. The rule is the only edge it has; the paper around it does
  * the rest of the separating.
  *
@@ -51,7 +51,7 @@ const hasPadding = (className) => /(?:^|\s)-?p[xytrbles]?-/.test(className);
  */
 export const Card = ({ children, className = "" }) => (
   <div
-    className={`border-t-2 border-rule-heavy bg-surface ${hasPadding(className) ? '' : 'px-6 pb-7 pt-5'} ${className}`}
+    className={`border-t-2 border-rule-strong bg-surface ${hasPadding(className) ? '' : 'px-6 pb-7 pt-5'} ${className}`}
   >
     {children}
   </div>
@@ -61,8 +61,11 @@ export const Card = ({ children, className = "" }) => (
  * A ruled form field, not a box.
  *
  * The label is a column head (`.eyebrow`); the input is borderless with a
- * single 1px `--rule` underneath it, so a stack of fields reads as a ruled
- * form. The figure is tabular and right-aligned into a figure column; the unit
+ * single 1px `--control-edge` underneath it, so a stack of fields reads as a
+ * ruled form. That underline is the field's whole resting affordance, so it
+ * comes off the control weight rather than off `--rule`: `--rule` is
+ * typographic division and measures 1.37:1 light / 1.26:1 dark on `--surface`,
+ * which identifies nothing. The figure is tabular and right-aligned; the unit
  * sits at the end of that column in Spline Sans Mono at 0.74× in `--ink-3`.
  * `--field` appears only under focus, and the focus ring is the global
  * `--focus` outline.
@@ -109,7 +112,7 @@ export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1",
             letterSpacing: 'var(--track-15)',
             paddingRight: unit ? `${unit.length * 0.46 + 0.5}rem` : undefined,
           }}
-          className={`tnum h-9 w-full border-0 border-b border-rule bg-transparent pb-1 pl-0 pt-1 text-right font-sans text-ink [appearance:textfield] focus:bg-field [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${readOnly ? 'cursor-not-allowed text-ink-3' : ''}`}
+          className={`tnum h-9 w-full border-0 border-b border-control-edge bg-transparent pb-1 pl-0 pt-1 text-right font-sans text-ink [appearance:textfield] focus:bg-field [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${readOnly ? 'cursor-not-allowed text-ink-3' : ''}`}
           step={step}
         />
         {unit && (
@@ -139,11 +142,11 @@ export const InputField = ({ label, value, onChange, onBlur, unit, step = "0.1",
  * The chosen one carries the 2px rule; the other carries none.
  */
 export const ProposalSelector = ({ mode, setMode }) => (
-  <div className="mb-6 flex gap-8 border-b-[0.5px] border-hair">
+  <div className="mb-6 flex gap-8 border-b-[0.5px] border-rule">
     <button
       onClick={() => setMode('new')}
       className={`eyebrow -mb-px flex items-center gap-1.5 border-b-2 bg-transparent px-0 pb-2 pt-1 ${mode === 'new'
-        ? 'border-rule-heavy text-ink'
+        ? 'border-rule-strong text-ink'
         : 'border-transparent text-ink-3 hover:text-ink-2'
         }`}
     >
@@ -152,7 +155,7 @@ export const ProposalSelector = ({ mode, setMode }) => (
     <button
       onClick={() => setMode('retrofit')}
       className={`eyebrow -mb-px flex items-center gap-1.5 border-b-2 bg-transparent px-0 pb-2 pt-1 ${mode === 'retrofit'
-        ? 'border-rule-heavy text-ink'
+        ? 'border-rule-strong text-ink'
         : 'border-transparent text-ink-3 hover:text-ink-2'
         }`}
     >
@@ -167,7 +170,7 @@ export const ChartTab = ({ active, onClick, label }) => (
     onClick={onClick}
     aria-pressed={active}
     className={`eyebrow -mb-px border-b-2 bg-transparent px-0 pb-2 pt-1 ${active
-      ? 'border-rule-heavy text-ink'
+      ? 'border-rule-strong text-ink'
       : 'border-transparent text-ink-3 hover:text-ink-2'
       }`}
   >
@@ -198,12 +201,12 @@ export const Figure = ({ number, caption, children, className = "" }) => (
  *
  * A line item that is zero because of a real-world fact is printed, then
  * visibly zeroed — never silently absent. The figure keeps its ink and takes a
- * 1px `--mark` rule straight through it: the STRIKE is the disclosure marker,
+ * 1px `--d-bad` rule straight through it: the STRIKE is the disclosure marker,
  * and it is the only chroma this row is allowed. It is permitted because it is
  * doing an auditor's job, not a decorative one.
  *
  * The reason is prose, therefore chrome, therefore achromatic — Spline Sans
- * Mono in `--ink-3`. It used to wear `--mark`, which put the alarm colour on
+ * Mono in `--ink-3`. It used to wear `--d-bad`, which put the alarm colour on
  * strings like "bought with cash — nothing is financed": a neutral fact about
  * the configuration, not a void state. Chroma belongs to data and nothing else,
  * and the strike above already says the zero is deliberate.
@@ -220,7 +223,7 @@ export const Figure = ({ number, caption, children, className = "" }) => (
  * printed: this row exists to say why a zero is a zero.
  */
 export const StruckRow = ({ label, value, reason, marker, className = "" }) => (
-  <div className={`border-b-[0.5px] border-hair py-1.5 ${className}`}>
+  <div className={`border-b-[0.5px] border-rule py-1.5 ${className}`}>
     <div className="flex items-baseline justify-between gap-4">
       <span
         className="text-ink-2"
@@ -235,7 +238,7 @@ export const StruckRow = ({ label, value, reason, marker, className = "" }) => (
         <span
           style={{
             textDecorationLine: 'line-through',
-            textDecorationColor: 'var(--mark)',
+            textDecorationColor: 'var(--d-bad)',
             textDecorationThickness: '1px',
             textDecorationSkipInk: 'none',
           }}
@@ -307,15 +310,29 @@ export const Perforation = ({ className = "", label = "Assumptions follow" }) =>
 // same stop for the same number.
 // =============================================================================
 
-/** Stop index -> token class. Literal strings; see above. */
+/** Stop index -> FILL token class. Literal strings; see above. */
 const RAMP_BG = ['bg-ir-0', 'bg-ir-1', 'bg-ir-2', 'bg-ir-3', 'bg-ir-4', 'bg-ir-5'];
+
+/**
+ * Stop index -> FOREGROUND token class, and a different series from the fills
+ * above on purpose.
+ *
+ * A fill is allowed the pale sequential low end: the strip carrying it is
+ * redundantly encoded three ways (a title per cell, the sr-only table, the
+ * LOW/PEAK marks), so no reader has to pull a quantity out of the hue. A figure
+ * inked with a ramp stop is TEXT, and text owes 4.5:1 whatever size it is set
+ * at — which light `--ir-0` (2.55:1 on `--surface`), light `--ir-1` (3.53:1)
+ * and dark `--ir-0` (4.48:1) do not clear. `--ir-t-*` is the same hue path
+ * re-pitched until every stop does; see the block in src/index.css for the
+ * measurements. Nothing outside this array writes `text-ir-N`.
+ */
 const RAMP_TEXT = [
-  'text-ir-0',
-  'text-ir-1',
-  'text-ir-2',
-  'text-ir-3',
-  'text-ir-4',
-  'text-ir-5',
+  'text-ir-t-0',
+  'text-ir-t-1',
+  'text-ir-t-2',
+  'text-ir-t-3',
+  'text-ir-t-4',
+  'text-ir-t-5',
 ];
 
 /**
@@ -324,7 +341,9 @@ const RAMP_TEXT = [
  * the micro-label above it or the unit beside it, which are chrome.
  *
  * Returns a class, not a colour, so CSS keeps ownership of the value and the
- * readout re-tints on a theme flip without React hearing about it.
+ * readout re-tints on a theme flip without React hearing about it. It returns
+ * the FOREGROUND series, so the answer is safe at any size in the scale — a
+ * 13px line item as much as a 56px hero figure.
  */
 export const toneForValue = (value, min, max) => RAMP_TEXT[rampIndexFor(value, min, max)];
 

@@ -516,7 +516,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
                 The strip is not the only encoding: each cell carries its month
                 and figure, a visually-hidden table carries all twelve, and the
                 mono row beneath names the low and the peak. */}
-            <hr className="rule-heavy mt-8" />
+            <hr className="rule-strong mt-8" />
             <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <SectionHead number="03">Production by month</SectionHead>
               <RampLegend low="LOW" high="PEAK" />
@@ -534,7 +534,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
               )}
             />
 
-            <hr className="rule-heavy mt-8" />
+            <hr className="rule-strong mt-8" />
             <SectionHead number="04" className="mt-2.5">Cumulative cost</SectionHead>
             <div className="mt-1 flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline">
               <p className="text-ink-2" style={lineItem}>
