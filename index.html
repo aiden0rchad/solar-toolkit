@@ -2,9 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>" />
+    <!--
+      Render-blocking on purpose: no async, no defer, and ahead of every
+      stylesheet, so the theme attribute is on <html> before first paint.
+      Write NOTHING when the key is absent — persisting a resolved value on a
+      first visit would permanently pin the reader out of their system setting.
+    -->
+    <script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+    <!--
+      The counterfoil, drawn: a small sheet of safety paper carrying a heavy
+      masthead rule, two ruled line items with their figures in a right-hand
+      column, and the lower figure struck in the auditor's red. No <text>, so
+      no emoji — emoji as iconography is forbidden by name in DESIGN.md, and
+      this is the most-seen mark the product has. `#` is percent-encoded: a raw
+      one would be read as the URL's fragment and truncate the icon.
+    -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 fill=%22%23eaeff4%22/><g fill=%22%230a1420%22><rect x=%224%22 y=%225%22 width=%2224%22 height=%223%22/><rect x=%224%22 y=%2213%22 width=%2213%22 height=%222%22/><rect x=%2221%22 y=%2213%22 width=%227%22 height=%222%22/><rect x=%224%22 y=%2220%22 width=%2213%22 height=%222%22/><rect x=%2221%22 y=%2220%22 width=%227%22 height=%222%22/></g><rect x=%2219%22 y=%2220.5%22 width=%2211%22 height=%221%22 fill=%22%23b91c1c%22/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f9f9f7" />
+    <meta name="theme-color" content="#eaeff4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080d14" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="SolarPro Consultant Toolkit — ROI calculator, EV comparison, blackout simulator, and more for solar energy professionals." />
     <title>SolarPro Toolkit</title>
   </head>
