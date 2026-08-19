@@ -176,7 +176,7 @@ const App = () => {
                 placeholder holding the measure until the chunk arrives. */}
             <main className="min-w-0">
               {(activeTool.tier === 'pro' && !isPro) || !activeTool.component
-                ? <ProLockCard tool={activeTool} />
+                ? <ProLockCard tool={activeTool} onNavigate={setView} />
                 : <Suspense fallback={<div className="h-px w-full bg-rule" role="status" aria-label="Loading" />}>
                     <ActiveComponent {...activeProps} />
                   </Suspense>}
