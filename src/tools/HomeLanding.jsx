@@ -774,6 +774,14 @@ const HomeLanding = ({ onNavigate, tools }) => {
           </a>
           {' '}&#8212; I&#8217;m a university student building this between classes.
         </p>
+        <p className="mt-2 max-w-[52em] text-ink-3" style={footnote}>
+          If you&#8217;d rather have someone walk through your own bill with you, I do paid consults:
+          one hour, your real numbers, and a written proposal at the end. I don&#8217;t sell panels and
+          I take no referral fees, so &#8220;not yet&#8221; is an answer I&#8217;m allowed to give.{' '}
+          <a href="https://lycsweb.com" target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
+            lycsweb.com
+          </a>
+        </p>
       </footer>
 
       {/* The premises the plot is standing on, in the margin where assumptions

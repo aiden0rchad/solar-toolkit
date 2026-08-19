@@ -48,17 +48,38 @@ Defaults are California flavored (TOU rates, NEM 3.0, CA climate profiles), but 
 | **Usage Estimator** | Rough out your home's kWh when you don't have a bill handy. |
 | **Appliance Auditor** | Add up future loads like an EV or a pool pump before sizing anything. |
 | **Smart Bill Decoder** | Which parts of your bill solar removes, and which parts it can't touch. |
-| **NEM 1.0 / 2.0 / 3.0 explainers** | Why batteries matter so much under NEM 3.0. |
+| **NEM 1.0 / 2.0 / 3.0 explainers** | What changed, hour by hour, with the rates charted and every term defined. |
 
 <a id="pro"></a>
 
 ## The Pro version (not ready yet)
 
-I'm still working on this part. The plan is a paid tier for people who do solar for a living: a guided consult wizard you can run in front of a client, the full control ROI calculator, and a proposal generator that turns the numbers into something you can print and hand over.
+Pro is the same math with the lid off, aimed at people who do solar for a living rather than people working out one house.
 
-If you clicked an Upgrade button in the app and landed here, that's why. There is nothing to buy yet. Watch or star the repo and you'll know the moment that changes.
+**You can see it before it exists.** Open [Client Consult](https://aiden0rchad.github.io/solar-toolkit/#/consult), [ROI Calculator](https://aiden0rchad.github.io/solar-toolkit/#/calculator) or [Proposal Generator](https://aiden0rchad.github.io/solar-toolkit/#/proposal) in the free app and each one shows you a worked preview: the full control surface, a specimen of the output, and the case it was computed from. Those numbers are real. They come out of the same engine in this repository that every free tool runs on, computed in your browser as the page loads, not screenshotted from somewhere.
+
+Three tools:
+
+- **Client Consult Wizard.** A six step interview you run at the kitchen table. Client, bill, usage, system, financing, result. The payback recomputes between questions, so the client watches the number move when they tell you their real bill.
+- **ROI Calculator (Pro).** Every knob exposed. Full tariff control, real battery physics (depth of discharge, reserve floor, round trip efficiency, degradation), retrofits over an existing loan or a PPA with its escalator, and 25 years modelled month by month.
+- **Proposal Generator.** All of it assembled into one printable document on your letterhead, carrying the assumptions page with it. That page is the part that wins arguments six months later.
+
+I'm still building it and there is nothing to buy yet. If you clicked an Upgrade button in the app and landed here, that's why. Watch or star the repo and you'll know the moment that changes.
 
 When it launches, a Pro subscription will also be how you get the commercial license this project requires for work use.
+
+## Hire me for a consult
+
+If you'd rather have someone walk you through your own numbers, that's something I do.
+
+**$50 for a one hour session.** We go through your actual bill and usage, work out whether solar makes sense for your house at all, talk through which installers in your area are worth quoting, and you get a proposal PDF at the end with the numbers written down. Then a short second session once you've had time to sit with it, to go over the results and look over any quotes you've collected.
+
+The reason this is worth $50 is that the alternative is free. A salesperson from a large national installer will happily spend an hour with you too, but they're paid on commission and they only sell one product, so the answer is decided before they arrive. I don't sell panels and I don't take referral fees from installers, which means "don't do this yet" and "your usage is too low to justify a battery" are both answers I'm allowed to give you. Over 25 years that's usually worth a great deal more than the fifty dollars.
+
+Get in touch:
+
+- **[lycsweb.com](https://lycsweb.com)** is the front door
+- Or [open an issue](../../issues) on this repo if you'd rather do it in public
 
 ## Run it yourself
 
