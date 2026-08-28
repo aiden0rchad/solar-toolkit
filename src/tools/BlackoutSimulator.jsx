@@ -7,6 +7,12 @@ import { useChartTheme } from '../components/chartTheme';
 import Rail from '../components/Rail';
 import { usePremises } from '../components/useShell';
 import { batteryPresets } from '../data/batteryPresets';
+import {
+  DEFAULT_INVERTER_EFFICIENCY,
+  DEFAULT_INVERTER_STANDBY_W,
+  HORIZON_HOURS,
+  simulateBackup,
+} from '../engine/backup';
 
 // =============================================================================
 // INSTRUMENT — Blackout Simulator.
@@ -30,9 +36,6 @@ import { batteryPresets } from '../data/batteryPresets';
 // model's own assumptions go to the marginalia rail, keyed to the figures by
 // footnote marker. Neither lives in a tooltip.
 // =============================================================================
-
-/** The simulation horizon, and therefore the domain the runtime is inked in. */
-const HORIZON_HOURS = 96;
 
 /**
  * One step of the bi-modal scale — size, leading and tracking together. They
@@ -148,6 +151,11 @@ const BlackoutSimulator = ({ onExport }) => {
   const [preset, setPreset] = useState(batteryPresets[0].label);
   const [solarRecharge, setSolarRecharge] = useState(false);
   const [solarOutput, setSolarOutput] = useState(5);
+  // The inverter, which the model used to pretend was not there. Editable,
+  // because both figures vary by a wide margin across real hardware and a
+  // number the reader cannot check is a number they have to take on faith.
+  const [inverterEfficiency, setInverterEfficiency] = useState(DEFAULT_INVERTER_EFFICIENCY);
+  const [inverterStandbyW, setInverterStandbyW] = useState(DEFAULT_INVERTER_STANDBY_W);
   const [activeLoads, setActiveLoads] = useState([
     { id: 1, name: 'Refrigerator', watts: 150, category: 'Essential', active: true },
     { id: 2, name: 'Wi-Fi Router', watts: 15, category: 'Essential', active: true },
@@ -166,30 +174,28 @@ const BlackoutSimulator = ({ onExport }) => {
   const addCustom = () => { if (customName && customWatts > 0) { setActiveLoads([...activeLoads, { id: Date.now(), name: customName, watts: parseInt(customWatts), category: 'Custom', active: true }]); setCustomName(''); setCustomWatts(''); } };
   const totalWatts = activeLoads.filter(l => l.active).reduce((a, c) => a + c.watts, 0);
 
-  // Hourly simulation over 96h starting at full charge (outage begins 6 PM).
-  // Solar follows a day arc (7am–7pm, ~75% peak clearness) instead of the old
-  // flat 50%-of-nameplate-even-at-midnight shortcut.
-  const sim = useMemo(() => {
-    const usableWh = batterySize * 1000 * 0.9;
-    if (usableWh <= 0 || totalWatts <= 0) return { hours: null, trace: [], avgSolarW: 0 };
-    let soc = usableWh;
-    const trace = [{ hour: 0, remaining: 100 }];
-    let solarWhTotal = 0;
-    for (let h = 1; h <= HORIZON_HOURS; h++) {
-      const clock = (18 + h) % 24; // outage starts at 6 PM
-      const solarW = solarRecharge && clock >= 7 && clock <= 19
-        ? solarOutput * 1000 * 0.75 * Math.sin(Math.PI * (clock - 7) / 12)
-        : 0;
-      solarWhTotal += solarW;
-      soc = Math.min(usableWh, soc + solarW - totalWatts);
-      trace.push({ hour: h, remaining: Math.max(0, Math.round((soc / usableWh) * 100)) });
-      if (soc <= 0) return { hours: h, trace, avgSolarW: solarWhTotal / h };
-    }
-    return { hours: null, trace, avgSolarW: solarWhTotal / HORIZON_HOURS };
-  }, [batterySize, totalWatts, solarRecharge, solarOutput]);
+  // THE SIMULATION lives in `src/engine/backup.js` — pure, tested, and shared.
+  // It is not inline here any more because the inverter losses it now models
+  // are exactly the kind of arithmetic that needs a test around it: the old
+  // inline version subtracted AC appliance watts straight off DC battery
+  // capacity, which overstated every runtime this tool has ever printed.
+  const sim = useMemo(() => simulateBackup({
+    batteryKwh: batterySize,
+    loadW: totalWatts,
+    inverterEfficiency,
+    inverterStandbyW,
+    solarRecharge,
+    solarKw: solarOutput,
+  }), [batterySize, totalWatts, inverterEfficiency, inverterStandbyW, solarRecharge, solarOutput]);
 
-  const estimatedHours = totalWatts <= 0 ? '∞' : sim.hours === null ? '96+' : String(sim.hours);
-  const netDraw = Math.max(0, totalWatts - sim.avgSolarW);
+  // No more infinity. An inverter with nothing plugged into it still draws its
+  // standby watts, so a house with every appliance switched off drains the
+  // battery too — slowly, but it drains. `96+` is the honest ceiling here, and
+  // it is what the horizon actually proved.
+  const estimatedHours = sim.hours === null ? `${HORIZON_HOURS}+` : String(sim.hours);
+  // Net of solar, and measured at the outlets: appliances plus the inverter's
+  // own draw, which is load whether or not anything is switched on.
+  const netDraw = Math.max(0, sim.acDemandW - sim.avgSolarW);
   const depletionData = sim.trace;
 
   // Series and chrome for the theme actually on screen — resolved at runtime,
@@ -199,13 +205,18 @@ const BlackoutSimulator = ({ onExport }) => {
   // The runtime is the measured quantity on this sheet, so the hero figure is
   // inked by its own magnitude across the horizon the model actually ran: an
   // outage the battery rides out entirely sits at the warm end, and a load that
-  // flattens it in an hour sits at the cool one. A configuration that draws
-  // nothing never runs down, so it reads as the whole horizon.
-  const runtimeTone = toneForValue(
-    totalWatts <= 0 ? HORIZON_HOURS : sim.hours ?? HORIZON_HOURS,
-    0,
-    HORIZON_HOURS,
-  );
+  // flattens it in an hour sits at the cool one.
+  //
+  // THE ZERO-LOAD SPECIAL CASE IS GONE, and it had to go with the infinity it
+  // was written for. It forced the tone to the top of the ramp whenever no
+  // appliance was ticked, on the reasoning that a house drawing nothing never
+  // runs down — which is exactly the belief the inverter model exists to
+  // falsify. Standby draw is load. With it, unticking everything on a 1 kWh
+  // battery prints "34 hrs" and used to ink it citron, the colour of having
+  // ridden out the whole 96 hours; the hue overstated the reading by three
+  // stops, in the flattering direction. `sim.hours` is the figure printed, so
+  // `sim.hours` is the figure inked.
+  const runtimeTone = toneForValue(sim.hours ?? HORIZON_HOURS, 0, HORIZON_HOURS);
 
   // --- marginalia ----------------------------------------------------------
   // The model's own premises, printed on the page. Markers run in house order
@@ -213,13 +224,16 @@ const BlackoutSimulator = ({ onExport }) => {
   // hole in the sequence and the keys on the sheet keep matching the rail.
   const notes = [
     { key: 'usable', term: 'Usable capacity', value: '90% of nameplate' },
+    { key: 'inverter', term: 'Inverter conversion', value: `${decimal(inverterEfficiency)}% DC to AC` },
+    { key: 'standby', term: 'Inverter standby draw', value: `${integer(inverterStandbyW)} W, continuous` },
     { key: 'start', term: 'Outage begins', value: '6:00 PM' },
-    { key: 'horizon', term: 'Simulation horizon', value: '96 hours' },
+    { key: 'horizon', term: 'Simulation horizon', value: `${HORIZON_HOURS} hours` },
     ...(solarRecharge
-      ? [
-        { key: 'window', term: 'Solar recharge window', value: '7 AM – 7 PM' },
-        { key: 'clearness', term: 'Clearness at solar noon', value: '75% of nameplate' },
-      ]
+      // One note, not two. `clearness` used to be its own entry and nothing on
+      // the sheet keyed to it, so the rail printed a footnote symbol answering
+      // a marker that was never set — the same defect the markers exist to
+      // prevent. Both facts belong to the same premise anyway.
+      ? [{ key: 'window', term: 'Solar recharge', value: '7 AM – 7 PM, peaking at 75% of nameplate' }]
       : []),
   ];
   const markerFor = (key) => MARKERS[notes.findIndex(note => note.key === key)] ?? '';
@@ -235,17 +249,24 @@ const BlackoutSimulator = ({ onExport }) => {
   // row of stat cells. Figures here carry no tone: they are the inputs the
   // runtime is made of, not the reading, and only the reading is inked.
   const readouts = [
-    { label: 'Total Load', value: integer(totalWatts), unit: 'W' },
-    { label: 'Battery', marker: markerFor('usable'), value: decimal(batterySize), unit: 'kWh' },
+    { label: 'Load + Inverter', marker: markerFor('standby'), value: integer(sim.acDemandW), unit: 'W' },
+    { label: 'Battery Draw', marker: markerFor('inverter'), value: integer(sim.dcDrawW), unit: 'W' },
+    // NET DRAW ONLY EARNS A CELL WHEN THERE IS SOLAR TO NET AGAINST. Without
+    // it the figure is identical to `Load + Inverter` by construction, and two
+    // cells printing the same number invite the reader to hunt for a difference
+    // that does not exist. The battery's capacity takes the slot instead, which
+    // is the premise the runtime is actually divided out of.
     ...(solarRecharge
-      ? [{
-        label: 'Solar Offset · 24h avg',
-        marker: markerFor('window'),
-        value: `~${integer(sim.avgSolarW)}`,
-        unit: 'W',
-      }]
-      : []),
-    { label: 'Net Draw', value: integer(netDraw), unit: 'W' },
+      ? [
+        {
+          label: 'Solar Offset · 24h avg',
+          marker: markerFor('window'),
+          value: `~${integer(sim.avgSolarW)}`,
+          unit: 'W',
+        },
+        { label: 'Net Draw', value: integer(netDraw), unit: 'W' },
+      ]
+      : [{ label: 'Battery', marker: markerFor('usable'), value: decimal(batterySize), unit: 'kWh' }]),
   ];
 
   return (
@@ -317,10 +338,38 @@ const BlackoutSimulator = ({ onExport }) => {
             </label>
 
             {solarRecharge && (
-              <div className="mt-4 -mb-4">
+              <div className="mt-4">
                 <InputField label="Solar System Size" value={solarOutput} onChange={setSolarOutput} unit="kW" step="0.5" />
               </div>
             )}
+
+            {/* THE INVERTER. Every watt the battery sends to the house passes
+                through it, and it was previously modelled as though it were a
+                wire. */}
+            <div className="mt-5">
+              <p className="eyebrow border-b border-rule pb-1">Inverter</p>
+              <div className="mt-3 -mb-4">
+                <InputField
+                  label="Conversion Efficiency"
+                  value={inverterEfficiency}
+                  onChange={setInverterEfficiency}
+                  onBlur={() => setInverterEfficiency(v => Math.min(100, Math.max(50, Number.isNaN(v) ? 50 : v)))}
+                  unit="%"
+                  min={50}
+                  step="0.5"
+                  tooltip="Share of the battery's DC output that reaches your appliances as AC. Typically 92-97% for a modern hybrid inverter, and lower than its rated figure when the load is small."
+                />
+                <InputField
+                  label="Standby Draw"
+                  value={inverterStandbyW}
+                  onChange={setInverterStandbyW}
+                  onBlur={() => setInverterStandbyW(v => Math.min(1000, Math.max(0, Number.isNaN(v) ? 0 : v)))}
+                  unit="W"
+                  step="5"
+                  tooltip="What the inverter and gateway consume continuously just by being switched on, whether or not anything is running. Usually 15-50 W, and a large share of a light essentials-only load."
+                />
+              </div>
+            </div>
           </Card>
 
           <Card className="px-5 pb-6 pt-4">
@@ -482,7 +531,7 @@ const BlackoutSimulator = ({ onExport }) => {
             <hr className="rule mt-7" />
             <button
               type="button"
-              onClick={() => onExport({ batterySize, totalWatts, estimatedHours: parseFloat(estimatedHours) || 0, activeLoads: activeLoads.filter(l => l.active), solarRecharge, netDraw })}
+              onClick={() => onExport({ batterySize, totalWatts, estimatedHours: parseFloat(estimatedHours) || 0, activeLoads: activeLoads.filter(l => l.active), solarRecharge, netDraw, inverterEfficiency, inverterStandbyW, acDemandW: Math.round(sim.acDemandW), dcDrawW: Math.round(sim.dcDrawW) })}
               className="eyebrow mt-6 w-full bg-ink px-5 py-3 text-center text-surface hover:bg-ink-2 print:hidden"
             >
               Export to Proposal
