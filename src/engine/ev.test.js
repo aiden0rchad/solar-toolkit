@@ -60,9 +60,61 @@ describe('computeEvStats — financing', () => {
   });
 
   it('has no payoff once the window outlasts the loan, with payments capped at the term', () => {
-    const s = computeEvStats({ ...base, years: 8 }); // 96-month window, 72-month loan
+    const s = computeEvStats({ ...base, years: 15 });
     expect(s.evLoanPayoff).toBe(0);
     expect(s.totalEvPayments).toBeCloseTo(s.evMonthlyFinance * 72 + 5000, 6);
+    expect(s.cumulative.at(-1).month).toBe(180);
+  });
+
+  it('applies a trade-in to principal once, reducing both the loan and payment', () => {
+    const withoutTrade = computeEvStats({ ...base, evInterestRate: 0 });
+    const withTrade = computeEvStats({ ...base, evInterestRate: 0, tradeInValue: 10000 });
+
+    expect(withTrade.tradeInAppliedToLoan).toBe(10000);
+    expect(withTrade.financedPrincipal).toBe(withoutTrade.financedPrincipal - 10000);
+    expect(withTrade.evMonthlyFinance).toBeCloseTo(withoutTrade.evMonthlyFinance - 10000 / 72, 6);
+    expect(withTrade.totalEvPayments).toBeCloseTo(base.evPrice - 10000, 6);
+    expect(withTrade.totalEvCost).toBeCloseTo(withoutTrade.totalEvCost - 10000, 6);
+    expect(withTrade.cumulative[0]).toEqual({ month: 0, ice: 0, ev: base.evDownPayment });
+  });
+
+  it('uses the trade-adjusted principal for a payoff before the loan ends', () => {
+    const s = computeEvStats({ ...base, tradeInValue: 9000 });
+    expect(s.evLoanPayoff).toBeCloseTo(
+      evLoanBalance(base.evPrice - base.evDownPayment - 9000, base.evInterestRate, base.evLoanTerm, 60),
+      6,
+    );
+  });
+
+  it('does not overfund the purchase when cash down plus trade-in exceeds price', () => {
+    const s = computeEvStats({
+      ...base,
+      evInterestRate: 0,
+      evPrice: 30000,
+      evDownPayment: 10000,
+      tradeInValue: 25000,
+    });
+    expect(s.tradeInAppliedToLoan).toBe(25000);
+    expect(s.cashDownPayment).toBe(5000);
+    expect(s.financedPrincipal).toBe(0);
+    expect(s.evMonthlyFinance).toBe(0);
+    expect(s.totalEvPayments).toBe(5000);
+    expect(s.cumulative[0].ev).toBe(5000);
+  });
+
+  it('caps trade-in credit at the EV price when equity is higher', () => {
+    const s = computeEvStats({ ...base, evPrice: 30000, evDownPayment: 5000, tradeInValue: 35000 });
+    expect(s.tradeInCredit).toBe(30000);
+    expect(s.tradeInAppliedToLoan).toBe(30000);
+    expect(s.cashDownPayment).toBe(0);
+    expect(s.financedPrincipal).toBe(0);
+    expect(s.totalEvPayments).toBe(0);
+  });
+
+  it.each(['cash', 'lease'])('caps excess trade-in equity for a %s purchase', evPurchaseMethod => {
+    const s = computeEvStats({ ...base, evPurchaseMethod, tradeInValue: 50000 });
+    expect(s.tradeInCredit).toBe(base.evPrice);
+    expect(s.upfrontEvCost).toBeLessThanOrEqual(0);
   });
 });
 
@@ -75,5 +127,90 @@ describe('computeEvStats — lease and internal consistency', () => {
   it('break-even series ends exactly on the ICE total (no hidden settlement on that side)', () => {
     const s = computeEvStats({ ...base, currentCarStatus: 'loan' });
     expect(Math.abs(s.cumulative.at(-1).ice - s.totalIceCost)).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps resale and loan payoff out of the cash-flow break-even series', () => {
+    const s = computeEvStats(base);
+    const chartEnd = s.cumulative.at(-1).ev;
+    expect(s.totalEvCost).toBeCloseTo(chartEnd + s.evLoanPayoff - s.resaleCredit, 0);
+    expect(s.settlementNetCredit).toBeCloseTo(s.resaleCredit - s.evLoanPayoff, 6);
+  });
+
+  it('preserves a negative net vehicle cost as a credit instead of discarding it', () => {
+    const s = computeEvStats({ ...base, tradeInValue: 40000 });
+    const operatingCost = (s.elecCostYear + base.evMaintCost + base.evRegFee) * base.years
+      + base.evInsurance * 12 * base.years;
+    expect(s.vehicleNetCost).toBeLessThan(0);
+    expect(s.totalEvCost).toBeCloseTo(operatingCost + s.vehicleNetCost, 6);
+  });
+
+  it('reports only a crossover that lasts through the selected horizon', () => {
+    const s = computeEvStats({
+      ...base,
+      years: 10,
+      currentCarStatus: 'loan',
+      currentCarPayment: 1100,
+      currentCarMonthsLeft: 24,
+      tradeInValue: 12000,
+    });
+    const earlyTemporaryWin = s.cumulative.find(point => point.month < 60 && point.ev < point.ice);
+    const laterLoss = s.cumulative.find(point => point.month > earlyTemporaryWin.month && point.ev >= point.ice);
+
+    expect(earlyTemporaryWin).toBeDefined();
+    expect(laterLoss).toBeDefined();
+    expect(s.breakEvenMonth).toBe(106);
+    expect(s.cumulative).toContainEqual(expect.objectContaining({ month: s.breakEvenMonth }));
+  });
+
+  it('returns no break even when the EV is still more expensive at the horizon', () => {
+    const s = computeEvStats({ ...base, years: 20, evPrice: 120000, tradeInValue: 0 });
+    expect(s.breakEvenMonth).toBeNull();
+    expect(s.cumulative.at(-1).month).toBe(240);
+  });
+
+  it('uses a custom MPG value throughout fuel and ownership costs', () => {
+    const lowMpg = computeEvStats({ ...base, iceMPG: 17.5 });
+    const highMpg = computeEvStats({ ...base, iceMPG: 35 });
+    expect(lowMpg.gasCostYear).toBeCloseTo(base.annualMiles / 17.5 * base.gasPrice, 6);
+    expect(highMpg.gasCostYear).toBeCloseTo(lowMpg.gasCostYear / 2, 6);
+    expect(lowMpg.totalIceCost).toBeGreaterThan(highMpg.totalIceCost);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('falls back to 25 MPG for invalid MPG input (%s)', iceMPG => {
+    const s = computeEvStats({ ...base, iceMPG });
+    expect(s.modeledIceMPG).toBe(25);
+    expect(s.gasCostYear).toBe(base.annualMiles / 25 * base.gasPrice);
+    expect(Number.isFinite(s.totalIceCost)).toBe(true);
+    expect(Number.isFinite(s.totalSavings)).toBe(true);
+  });
+
+  it.each([
+    [11.60, 12],
+    [12, 12],
+    [12.40, 13],
+  ])('uses precise values and includes equality when cash price is $%s', (evPrice, expectedMonth) => {
+    const s = computeEvStats({
+      ...base,
+      years: 2,
+      annualMiles: 12,
+      iceMPG: 1,
+      gasPrice: 1,
+      iceMaintCost: 0,
+      currentInsurance: 0,
+      evPurchaseMethod: 'cash',
+      evPrice,
+      elecRate: 0,
+      evMaintCost: 0,
+      evInsurance: 0,
+      evRegFee: 0,
+      tradeInValue: 0,
+      resalePct: 0,
+    });
+    expect(s.breakEvenMonth).toBe(expectedMonth);
+  });
+
+  it('bounds resale percentage between zero and one hundred', () => {
+    expect(computeEvStats({ ...base, resalePct: -20 }).retainedValuePct).toBe(0);
+    expect(computeEvStats({ ...base, resalePct: 140 }).retainedValuePct).toBe(100);
   });
 });

@@ -6,7 +6,7 @@ import Rail from '../components/Rail';
 import { usePremises } from '../components/useShell';
 import { barChartProps, currencyTick, currencyValue, useChartTheme } from '../components/chartTheme';
 import { evDatabase } from '../data/evDatabase';
-import { computeEvStats, evLoanPayment } from '../engine/ev';
+import { computeEvStats } from '../engine/ev';
 
 // =============================================================================
 // INSTRUMENT — EV vs. gas.
@@ -23,7 +23,7 @@ import { computeEvStats, evLoanPayment } from '../engine/ev';
 // delta (`--d-good` / `--d-bad`), the live-state word in the masthead, and the
 // readout figures that step the irradiance ramp against a stated domain. A
 // vehicle's CATEGORY is not a series and carries no hue — it is a micro-label,
-// which is why the per-category colour map is gone. The four TCO buckets are
+// which is why the per-category colour map is gone. The TCO buckets are
 // cost categories, not entities, so they are neutral ink steps and keep their
 // legend, which is the only thing naming them.
 //
@@ -249,6 +249,12 @@ const money2 = (n) => (
   Number.isFinite(n) ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'
 );
 const count = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString() : '—');
+const duration = (months) => {
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
+  const years = Math.floor(months / 12);
+  const remainder = months % 12;
+  return remainder ? `${years}y ${remainder}m` : `${years} year${years === 1 ? '' : 's'}`;
+};
 
 /** `rgb(13, 37, 39)` — the shape `getComputedStyle` hands back for a colour. */
 const parseRgb = (value) => {
@@ -326,8 +332,6 @@ const EVCalculator = ({ onExport }) => {
   const [tradeInValue, setTradeInValue] = useState(0);
   const [resalePct, setResalePct] = useState(45); // % of purchase price retained at end
 
-  const evMonthlyFinance = evLoanPayment(evPrice - evDownPayment, evInterestRate, evLoanTerm);
-
   const toggleCompare = (ev) => {
     setCompareList(prev => {
       const exists = prev.find(e => e.id === ev.id);
@@ -347,16 +351,15 @@ const EVCalculator = ({ onExport }) => {
     tradeInValue, resalePct,
   });
 
-  const stats = useMemo(() => {
-    const s = getStats(selectedEV);
-    const mo = ownYears * 12;
-    return {
-      ...s, chartData: [
-        { name: 'Current Car', fuel: s.gasCostYear * ownYears, maintenance: iceMaintCost * ownYears, payment: s.totalCurrentLoan, insurance: currentInsurance * mo },
-        { name: selectedEV.name, fuel: s.elecCostYear * ownYears, maintenance: (evMaintCost + evRegFee) * ownYears, payment: Math.max(0, s.totalEvPayments - tradeInValue - s.resaleCredit), insurance: evInsurance * mo },
-      ]
-    };
-  }, [selectedEV, annualMiles, gasPrice, iceMPG, elecRate, iceMaintCost, evMaintCost, currentCarStatus, currentCarPayment, currentCarMonthsLeft, currentInsurance, evPurchaseMethod, evPrice, evDownPayment, evLoanTerm, evInterestRate, evLeasePayment, evLeaseTerm, evLeaseDueAtSigning, evInsurance, evMonthlyFinance, ownYears, evRegFee, tradeInValue, resalePct]);
+  const computedStats = getStats(selectedEV);
+  const ownershipMonths = ownYears * 12;
+  const stats = {
+    ...computedStats,
+    chartData: [
+      { name: 'Current Car', fuel: computedStats.gasCostYear * ownYears, maintenance: iceMaintCost * ownYears, payment: computedStats.totalCurrentLoan, credit: 0, insurance: currentInsurance * ownershipMonths },
+      { name: selectedEV.name, fuel: computedStats.elecCostYear * ownYears, maintenance: (evMaintCost + evRegFee) * ownYears, payment: Math.max(0, computedStats.vehicleNetCost), credit: Math.min(0, computedStats.vehicleNetCost), insurance: evInsurance * ownershipMonths },
+    ],
+  };
   const isSaving = stats.totalSavings >= 0;
 
   // The premises the figures below stand on, published to the sticky context
@@ -390,20 +393,21 @@ const EVCalculator = ({ onExport }) => {
     { label: 'Annual fuel', prefix: '$', value: count(stats.elecCostYear), tone: toneForValue(stats.elecCostYear, 0, fuelScale) },
   ];
 
-  // The four TCO buckets are cost CATEGORIES, not entities, so they get no
-  // series hue: one ink diluted toward the sheet in four even steps, which is a
+  // The TCO buckets are cost CATEGORIES, not entities, so they get no
+  // series hue: one ink diluted toward the sheet in even steps, which is a
   // grey ramp in both themes and survives a photocopier by construction. The
   // legend stays, because its swatches name buckets rather than entities — it
   // is the only thing telling the reader which step is which.
   //
-  // Four *different* neutral tokens cannot do this job: --ink-2 and --ink-3 sit
+  // Different neutral tokens cannot do this job: --ink-2 and --ink-3 sit
   // a hair apart, and --rule vanishes against the sheet. Diluting one ink gives
   // genuinely even steps and a real fill per bucket, which the legend needs —
   // it paints its swatch from `fill` and ignores `fillOpacity`.
   const tcoFills = {
-    payment: dilute(chart.tokens.ink, chart.tokens.surface, 0.34),
-    fuel: dilute(chart.tokens.ink, chart.tokens.surface, 0.56),
-    insurance: dilute(chart.tokens.ink, chart.tokens.surface, 0.78),
+    credit: dilute(chart.tokens.ink, chart.tokens.surface, 0.20),
+    payment: dilute(chart.tokens.ink, chart.tokens.surface, 0.40),
+    fuel: dilute(chart.tokens.ink, chart.tokens.surface, 0.60),
+    insurance: dilute(chart.tokens.ink, chart.tokens.surface, 0.80),
     maintenance: chart.tokens.ink,
   };
 
@@ -437,7 +441,7 @@ const EVCalculator = ({ onExport }) => {
       <header className="mt-2">
         <h2 className="font-semibold text-ink" style={T26}>EV vs. Gas Calculator</h2>
         <p className="mt-2 max-w-[52em] text-ink-2" style={T15}>
-          See whether an EV would cost you less each month and over five years. Compare {evDatabase.length} models from {makes.length} manufacturers.
+          See whether an EV would cost you less each month and across your ownership period. Compare {evDatabase.length} models from {makes.length} manufacturers.
         </p>
       </header>
 
@@ -666,6 +670,16 @@ const EVCalculator = ({ onExport }) => {
                   />
                 ))}
               </ChoiceGroup>
+              <InputField
+                label="Your Car's MPG"
+                value={iceMPG}
+                onChange={setIceMPG}
+                onBlur={() => setIceMPG(value => Math.min(200, Math.max(1, Number.isFinite(value) ? value : 25)))}
+                unit="mpg"
+                min={1}
+                step="0.1"
+                tooltip="Choose a quick preset above or enter the MPG you actually get."
+              />
               <InputField label="Annual Mileage" value={annualMiles} onChange={setAnnualMiles} unit="mi/yr" step="500" />
               <InputField label="Gas Price" value={gasPrice} onChange={setGasPrice} unit="$/gal" />
               <ChoiceGroup id={`${uid}-charge`} label="Where does the charge come from?" className="mb-5">
@@ -710,12 +724,15 @@ const EVCalculator = ({ onExport }) => {
                 <div className="mb-4 flex items-baseline justify-between gap-4 border-t border-rule pt-2">
                   <span className="text-ink-2" style={T13}>Monthly Payment</span>
                   <span className="tnum font-semibold text-ink" style={T15}>
-                    {money(evMonthlyFinance)}<Unit of={15}>/mo</Unit>
+                    {money(stats.evMonthlyFinance)}<Unit of={15}>/mo</Unit>
                   </span>
                 </div>
+                <p className="mb-4 text-ink-3" style={T11}>
+                  Cash down applied: <span className="tnum font-medium text-ink">{money(stats.cashDownPayment)}</span>. Amount financed: <span className="tnum font-medium text-ink">{money(stats.financedPrincipal)}</span>. Your <span className="tnum">{money(stats.tradeInAppliedToLoan)}</span> trade-in reduces the loan balance once and is not counted as cash received.
+                </p>
                 {stats.evLoanPayoff > 0 && (
                   <p className="mb-4 text-ink-3" style={T11}>
-                    Loan balance at year {ownYears}: <span className="tnum font-medium text-ink">{money(stats.evLoanPayoff)}</span> — the term outlasts your ownership window, so this gets paid off from the sale and is counted in the totals.
+                    Loan balance at year {ownYears}: <span className="tnum font-medium text-ink">{money(stats.evLoanPayoff)}</span>. The term outlasts your ownership window, so this gets paid off when the EV is sold and is counted in the total cost.
                   </p>
                 )}
               </>)}
@@ -723,13 +740,24 @@ const EVCalculator = ({ onExport }) => {
                 <InputField label="Monthly Lease" value={evLeasePayment} onChange={setEvLeasePayment} unit="$/mo" step="10" />
                 <InputField label="Lease Term" value={evLeaseTerm} onChange={setEvLeaseTerm} unit="mo" step="12" />
                 <InputField label="Due at Signing" value={evLeaseDueAtSigning} onChange={setEvLeaseDueAtSigning} unit="$" step="500" />
+                <p className="mb-4 text-ink-3" style={T11}>
+                  Across {ownYears} years, this assumes each {evLeaseTerm}-month lease renews at the same monthly price, with the same due-at-signing amount paid again for every new term.
+                </p>
               </>)}
               {evPurchaseMethod === 'cash' && (<InputField label="Purchase Price" value={evPrice} onChange={setEvPrice} unit="$" step="500" />)}
               <InputField label="EV Insurance" value={evInsurance} onChange={setEvInsurance} unit="$/mo" step="5" />
 
               <hr className="hair my-6" />
 
-              <InputField label="Trade-In Value (current car)" value={tradeInValue} onChange={setTradeInValue} unit="$" step="500" tooltip="What you'd get selling or trading your current car — credited against the EV." />
+              <InputField
+                label="Trade-In Net Equity"
+                value={tradeInValue}
+                onChange={setTradeInValue}
+                onBlur={() => setTradeInValue(value => Math.min(Number.isFinite(evPrice) ? Math.max(0, evPrice) : 0, Math.max(0, Number.isFinite(value) ? value : 0)))}
+                unit="$"
+                step="500"
+                tooltip={evPurchaseMethod === 'finance' ? 'Enter what remains after paying off any current-car loan. Up to the EV price reduces principal once; any excess equity is not modeled.' : 'Enter what remains after paying off any current-car loan. Up to the EV price is credited once; any excess equity is not modeled.'}
+              />
               {evPurchaseMethod === 'lease'
                 ? (
                   // Printed, not omitted: a leased car is not yours to sell, so the
@@ -741,7 +769,22 @@ const EVCalculator = ({ onExport }) => {
                     className="mb-4"
                   />
                 )
-                : <InputField label="EV Resale Value After Ownership" value={resalePct} onChange={setResalePct} unit="%" step="5" tooltip="The EV is still worth something when you're done — credited at the end. 40–50% at 5 years is typical." />}
+                : <>
+                  <InputField
+                    label={`EV Resale Value After ${ownYears} Years`}
+                    value={resalePct}
+                    onChange={setResalePct}
+                    onBlur={() => setResalePct(value => Math.min(100, Math.max(0, Number.isFinite(value) ? value : 45)))}
+                    unit="%"
+                    step="5"
+                    tooltip={`This retained-value estimate applies at year ${ownYears}. Review it whenever you change the ownership period; the calculator does not adjust it automatically.`}
+                  />
+                  {ownYears > 10 && (
+                    <p className="-mt-2 mb-4 border-l-2 border-rule-strong pl-3 font-medium text-ink-2" style={T11}>
+                      Long ownership period: confirm that {resalePct}% is a realistic resale estimate at year {ownYears}.
+                    </p>
+                  )}
+                </>}
               <InputField label="Annual EV Registration Fee" value={evRegFee} onChange={setEvRegFee} unit="$/yr" step="10" tooltip="Many states charge EVs a road fee since they skip gas taxes — CA's is ~$118/yr." />
             </Section>
           </Card>
@@ -765,7 +808,7 @@ const EVCalculator = ({ onExport }) => {
             </Section>
 
             <ChoiceGroup id={`${uid}-own-years`} label="Ownership period" className="mt-9">
-              {[3, 5, 8, 10].map(y => (
+              {[3, 5, 8, 10, 15, 20].map(y => (
                 <ChartTab key={y} active={ownYears === y} onClick={() => setOwnYears(y)} label={`${y} yrs`} />
               ))}
             </ChoiceGroup>
@@ -825,9 +868,9 @@ const EVCalculator = ({ onExport }) => {
                 note={`≈ ${Math.round(stats.co2Avoided * 1000 / 21)} trees planted`}
               />
               <Readout
-                label="Cash-Flow Break Even"
-                value={stats.breakEvenMonth ? `${Math.floor(stats.breakEvenMonth / 12)}y ${stats.breakEvenMonth % 12}m` : 'Beyond ' + ownYears + ' yrs'}
-                note="before end-of-ownership settlement"
+                label="EV Matches or Stays Cheaper After"
+                value={stats.breakEvenMonth !== null ? duration(stats.breakEvenMonth) : `Not within ${ownYears} yrs`}
+                note={`Based on upfront and monthly spending. Resale value and any loan payoff at year ${ownYears} are excluded.`}
               />
             </div>
 
@@ -873,6 +916,22 @@ const EVCalculator = ({ onExport }) => {
               </div>
             </div>
 
+            {evPurchaseMethod !== 'lease' && (
+              <>
+                <BlockHead title={`End-of-Ownership Settlement at Year ${ownYears}`} className="mt-10" />
+                <LineRow label="Estimated EV resale credit" value={`+${money(stats.resaleCredit)}`} />
+                <LineRow label="Remaining loan payoff" value={`-${money(stats.evLoanPayoff)}`} />
+                <LineRow
+                  total
+                  label="Net credit at sale"
+                  value={`${stats.settlementNetCredit >= 0 ? '+' : '-'}${money(Math.abs(stats.settlementNetCredit))}`}
+                />
+                <p className="mt-2 text-ink-3" style={T11}>
+                  This settlement is included in total ownership cost. It is shown separately and does not change the cumulative spending chart or the break-even month.
+                </p>
+              </>
+            )}
+
             {/* FIG. 1 — the stacked buckets. Neutral ink steps, legend kept: the
                 swatches name cost buckets, not entities, so hue is not carrying
                 the argument here and the legend is doing real work. */}
@@ -888,14 +947,15 @@ const EVCalculator = ({ onExport }) => {
                   <YAxis {...chart.yAxisProps} orientation="left" type="category" dataKey="name" width={130} />
                   <Tooltip {...chart.barTooltipProps} formatter={currencyValue} />
                   <Legend {...chart.legendProps} />
-                  <Bar {...chart.barProps} dataKey="payment" name="Loan / Lease" stackId="a" fill={tcoFills.payment} />
+                  <Bar {...chart.barProps} dataKey="payment" name="Vehicle Cost" stackId="a" fill={tcoFills.payment} />
+                  <Bar {...chart.barProps} dataKey="credit" name="Net Vehicle Credit" stackId="a" fill={tcoFills.credit} />
                   <Bar {...chart.barProps} dataKey="fuel" name="Fuel / Energy" stackId="a" fill={tcoFills.fuel} />
                   <Bar {...chart.barProps} dataKey="insurance" name="Insurance" stackId="a" fill={tcoFills.insurance} />
                   <Bar {...chart.barProps} dataKey="maintenance" name="Maintenance" stackId="a" fill={tcoFills.maintenance} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <Figure number={1} className="mt-2" caption={`Everything the two cars cost over ${ownYears} years, split by bucket — the four steps are one ink thinned toward the sheet, because a cost bucket is not an entity and carries no series hue.`} />
+            <Figure number={1} className="mt-2" caption={`Everything the two cars cost over ${ownYears} years, split by bucket. If trade-in and resale exceed vehicle payments, the net vehicle credit extends left of zero.`} />
 
             {/* FIG. 2 — the crossing. The EV is the proposed system (`--d-solar`,
                 2px solid over a wash); the gas car is the do-nothing baseline
@@ -916,7 +976,7 @@ const EVCalculator = ({ onExport }) => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <Figure number={2} className="mt-2" caption="Cumulative money spent — the EV wins where its solid line drops below the dashed gas car." />
+            <Figure number={2} className="mt-2" caption="Cumulative upfront and monthly spending. Break even is the first month the EV matches or stays below the gas car through the selected ownership period. Resale and loan payoff at sale are excluded." />
 
             <hr className="rule mt-8" />
             <button
