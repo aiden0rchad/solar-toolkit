@@ -119,6 +119,13 @@ html[data-theme='dark'] {
   --d-good:  light-dark(#047857, #38e08c); /* positive delta, live/OK state */
   --d-bad:   light-dark(#b91c1c, #ff6b6b); /* negative delta, expired/void state */
 
+  /* Categorical ownership costs, independent of the EV/gas-car series hues. */
+  --cost-vehicle: light-dark(#7c3aed, #a78bfa);
+  --cost-credit: light-dark(#047857, #34d399);
+  --cost-energy: light-dark(#c2410c, #fb923c);
+  --cost-insurance: light-dark(#1d4ed8, #60a5fa);
+  --cost-maintenance: light-dark(#8a6500, #facc15);
+
   /* --- DATA — the irradiance ramp -------------------------------------
      The second sanctioned use of chroma, and the ONLY sequential scale in
      the system. Six ordinal stops, low irradiance to high, for encoding a
@@ -479,6 +486,12 @@ html[data-theme='dark'] {
     --d-third: #6d28d9;
     --d-good: #047857;
     --d-bad: #b91c1c;
+
+    --cost-vehicle: #7c3aed;
+    --cost-credit: #047857;
+    --cost-energy: #c2410c;
+    --cost-insurance: #1d4ed8;
+    --cost-maintenance: #8a6500;
 
     --ir-0: #af97d8;
     --ir-1: #508ad6;

@@ -26,9 +26,8 @@ const isCurrentEV = value => value && evDatabase.some(ev => Object.keys(ev).ever
 // delta (`--d-good` / `--d-bad`), the live-state word in the masthead, and the
 // readout figures that step the irradiance ramp against a stated domain. A
 // vehicle's CATEGORY is not a series and carries no hue — it is a micro-label,
-// which is why the per-category colour map is gone. The TCO buckets are
-// cost categories, not entities, so they are neutral ink steps and keep their
-// legend, which is the only thing naming them.
+// which is why the per-category colour map is gone. Plotted TCO cost buckets
+// have their own fixed categorical palette, named in the legend.
 //
 // The math is untouched: every figure on this page comes out of engine/ev.js.
 // =============================================================================
@@ -259,25 +258,6 @@ const duration = (months) => {
   return remainder ? `${years}y ${remainder}m` : `${years} year${years === 1 ? '' : 's'}`;
 };
 
-/** `rgb(13, 37, 39)` — the shape `getComputedStyle` hands back for a colour. */
-const parseRgb = (value) => {
-  const match = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(value || '');
-  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
-};
-
-/**
- * One ink, thinned toward the ground it sits on. Both arguments arrive already
- * resolved by the runtime token reader, so this never sees — and never
- * invents — a literal colour: it only mixes two the stylesheet chose.
- */
-const dilute = (ink, ground, amount) => {
-  const a = parseRgb(ink);
-  const b = parseRgb(ground);
-  if (!a || !b) return ink;
-  const [r, g, bl] = a.map((channel, i) => Math.round(channel * amount + b[i] * (1 - amount)));
-  return `rgb(${r}, ${g}, ${bl})`;
-};
-
 // --- TOOL: EV CALCULATOR (Expanded) ---
 const EVCalculator = ({ onExport }) => {
   // Ids so each caption is programmatically tied to the control (or button group)
@@ -396,22 +376,13 @@ const EVCalculator = ({ onExport }) => {
     { label: 'Annual fuel', prefix: '$', value: count(stats.elecCostYear), tone: toneForValue(stats.elecCostYear, 0, fuelScale) },
   ];
 
-  // The TCO buckets are cost CATEGORIES, not entities, so they get no
-  // series hue: one ink diluted toward the sheet in even steps, which is a
-  // grey ramp in both themes and survives a photocopier by construction. The
-  // legend stays, because its swatches name buckets rather than entities — it
-  // is the only thing telling the reader which step is which.
-  //
-  // Different neutral tokens cannot do this job: --ink-2 and --ink-3 sit
-  // a hair apart, and --rule vanishes against the sheet. Diluting one ink gives
-  // genuinely even steps and a real fill per bucket, which the legend needs —
-  // it paints its swatch from `fill` and ignores `fillOpacity`.
+  // Fixed category colors match the legend and re-resolve for light/dark/print.
   const tcoFills = {
-    credit: dilute(chart.tokens.ink, chart.tokens.surface, 0.20),
-    payment: dilute(chart.tokens.ink, chart.tokens.surface, 0.40),
-    fuel: dilute(chart.tokens.ink, chart.tokens.surface, 0.60),
-    insurance: dilute(chart.tokens.ink, chart.tokens.surface, 0.80),
-    maintenance: chart.tokens.ink,
+    payment: chart.tokens.costVehicle,
+    credit: chart.tokens.costCredit,
+    fuel: chart.tokens.costEnergy,
+    insurance: chart.tokens.costInsurance,
+    maintenance: chart.tokens.costMaintenance,
   };
 
   const compareColumns = compareList.map(ev => ({ ev, stats: getStats(ev) }));
@@ -935,12 +906,10 @@ const EVCalculator = ({ onExport }) => {
               </>
             )}
 
-            {/* FIG. 1 — the stacked buckets. Neutral ink steps, legend kept: the
-                swatches name cost buckets, not entities, so hue is not carrying
-                the argument here and the legend is doing real work. */}
+            {/* FIG. 1 — fixed category colors, matching legend and segment edges. */}
             <hr className="rule-strong mt-10" />
             <BlockHead title={`${ownYears}-Year Total Cost of Ownership`} className="mt-2.5" />
-            <div className="mt-3 h-[300px]">
+            <div className="ev-tco-chart mt-3 h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.chartData} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }} {...barChartProps}>
                   <XAxis {...chart.xAxisProps} type="number" tickFormatter={currencyTick} />
@@ -949,12 +918,12 @@ const EVCalculator = ({ onExport }) => {
                       a label orphaned from its figure. */}
                   <YAxis {...chart.yAxisProps} orientation="left" type="category" dataKey="name" width={130} />
                   <Tooltip {...chart.barTooltipProps} formatter={currencyValue} />
-                  <Legend {...chart.legendProps} />
-                  <Bar {...chart.barProps} dataKey="payment" name="Vehicle Cost" stackId="a" fill={tcoFills.payment} />
-                  <Bar {...chart.barProps} dataKey="credit" name="Net Vehicle Credit" stackId="a" fill={tcoFills.credit} />
-                  <Bar {...chart.barProps} dataKey="fuel" name="Fuel / Energy" stackId="a" fill={tcoFills.fuel} />
-                  <Bar {...chart.barProps} dataKey="insurance" name="Insurance" stackId="a" fill={tcoFills.insurance} />
-                  <Bar {...chart.barProps} dataKey="maintenance" name="Maintenance" stackId="a" fill={tcoFills.maintenance} />
+                  <Legend {...chart.legendProps} iconSize={11} />
+                  <Bar {...chart.barProps} dataKey="payment" name="Vehicle Cost" stackId="a" fill={tcoFills.payment} stroke={chart.tokens.surface} strokeWidth={1} />
+                  <Bar {...chart.barProps} dataKey="credit" name="Net Vehicle Credit" stackId="a" fill={tcoFills.credit} stroke={chart.tokens.surface} strokeWidth={1} />
+                  <Bar {...chart.barProps} dataKey="fuel" name="Fuel / Energy" stackId="a" fill={tcoFills.fuel} stroke={chart.tokens.surface} strokeWidth={1} />
+                  <Bar {...chart.barProps} dataKey="insurance" name="Insurance" stackId="a" fill={tcoFills.insurance} stroke={chart.tokens.surface} strokeWidth={1} />
+                  <Bar {...chart.barProps} dataKey="maintenance" name="Maintenance" stackId="a" fill={tcoFills.maintenance} stroke={chart.tokens.surface} strokeWidth={1} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

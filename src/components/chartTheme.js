@@ -33,6 +33,11 @@ const TOKEN_MAP = {
   '--d-third': 'third',
   '--d-good': 'good',
   '--d-bad': 'bad',
+  '--cost-vehicle': 'costVehicle',
+  '--cost-credit': 'costCredit',
+  '--cost-energy': 'costEnergy',
+  '--cost-insurance': 'costInsurance',
+  '--cost-maintenance': 'costMaintenance',
   // data — the irradiance ramp, low irradiance to high. Six ordinal stops;
   // `derive` gathers them into `ramp` so a consumer indexes an array instead
   // of six keys.

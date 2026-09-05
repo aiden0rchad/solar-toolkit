@@ -92,6 +92,21 @@ in the system and the one to measure a new data colour against; ceiling: `--d-go
 18% (dark) wash; `--d-grid` is 1.5px dashed with no fill. The chart must survive greyscale,
 print and colour-vision deficiency without relying on hue.
 
+### Ownership cost categories
+
+The EV total-cost stack uses a separate categorical palette, not the EV/gas-car
+entity colors. Categories retain the same hue, legend order, and stack position
+in both vehicle rows. Neutral segment outlines separate adjacent costs; the
+legend and tooltips name them. Legend text stays neutral. Print uses light values.
+
+| token | light | dark | category |
+|---|---|---|---|
+| `--cost-vehicle` | `#7c3aed` | `#a78bfa` | vehicle cost, violet |
+| `--cost-credit` | `#047857` | `#34d399` | net vehicle credit, green |
+| `--cost-energy` | `#c2410c` | `#fb923c` | fuel / energy, orange |
+| `--cost-insurance` | `#1d4ed8` | `#60a5fa` | insurance, blue |
+| `--cost-maintenance` | `#8a6500` | `#facc15` | maintenance, gold |
+
 ## The irradiance ramp — the one sequential scale
 
 Six ordinal stops, low irradiance to high, for encoding a **measured quantity** wherever one is
