@@ -5,7 +5,8 @@ import { RAMP_STOPS, currencyTick, useChartTheme } from '../components/chartThem
 import { Card, Figure, MonthStrip, RampLegend, StruckRow, toneForValue } from '../components/ui';
 import { batteryPresets } from '../data/batteryPresets';
 import { findBreakEven, runRoiSimulation } from '../engine/roi';
-import { annualSunHours } from '../engine/solar';
+import { annualProductionPerKw, buildMonthlySolarFactors } from '../engine/solar';
+import { DEFAULT_REGIONAL_PROFILE_ID, getRegionalProfile } from '../data/regionalProfiles';
 import { useEntitlement } from '../entitlement/useEntitlement';
 
 // =============================================================================
@@ -34,21 +35,15 @@ import { useEntitlement } from '../entitlement/useEntitlement';
 // =============================================================================
 
 // --- THE DEFAULT CASE --------------------------------------------------------
-// The same fixture Simple Solar ROI opens on — $250/mo, Central Valley, dual
-// peak, financed — so the plot on the front page and the plot one click later
-// are the same instrument reading the same premises. These constants mirror
-// the ones in SimpleSolarROI.jsx rather than importing them, because that tool
-// is a lazy chunk and the landing is eager: importing it here would pull the
-// whole calculator into the first paint.
+// Match the simple calculator's initial sourced profile without loading its UI.
 const MONTHLY_BILL = 250;
-const REGION = 'CA Central Valley';
+const DEFAULT_PROFILE = getRegionalProfile(DEFAULT_REGIONAL_PROFILE_ID).profile;
+const MONTHLY_SOLAR = buildMonthlySolarFactors({ resourceId: DEFAULT_PROFILE.resourceId }).monthlySolarFactors;
+const REGION = 'Sacramento, CA';
 const LOAD_SHAPE = 'Dual Peak (AC + Heat)';
 const PEAK_SHARE = 35;
-const PEAK_RATE = 0.58;
-const OFF_PEAK_RATE = 0.42;
-const RATE_ESCALATION = 5;
-const EXPORT_RATE = 0.04;
-const FIXED_CHARGE = 15;
+const { ratePeak: PEAK_RATE, rateOffPeak: OFF_PEAK_RATE, inflationRate: RATE_ESCALATION,
+  solarExportRate: EXPORT_RATE, monthlyFixedCharge: FIXED_CHARGE } = DEFAULT_PROFILE.assumptions;
 const LOAN_RATE = 7.99;
 const LOAN_TERM = 25;
 const COST_PER_WATT = 3.0;
@@ -60,8 +55,8 @@ const BLENDED_RATE = PEAK_RATE * PEAK_SHARE / 100 + OFF_PEAK_RATE * (1 - PEAK_SH
  * would only be ceremony around a deterministic value.
  */
 const DEFAULT_CASE = (() => {
-  const dailyUsage = MONTHLY_BILL / 30 / BLENDED_RATE;
-  const solarSize = Math.round((dailyUsage / annualSunHours(REGION)) * 10) / 10;
+  const dailyUsage = (MONTHLY_BILL - FIXED_CHARGE) * 12 / BLENDED_RATE / 365;
+  const solarSize = dailyUsage * 365 / annualProductionPerKw(MONTHLY_SOLAR);
   const systemCost = Math.round(solarSize * COST_PER_WATT * 1000 / 100) * 100;
 
   const simulation = runRoiSimulation({
@@ -85,7 +80,7 @@ const DEFAULT_CASE = (() => {
     rateOffPeak: OFF_PEAK_RATE,
     inflationRate: RATE_ESCALATION,
     solarSize,
-    sunProfile: REGION,
+    monthlySolarFactors: MONTHLY_SOLAR,
     monthlyFixedCharge: FIXED_CHARGE,
     solarExportRate: EXPORT_RATE,
     loadShape: LOAD_SHAPE,
@@ -111,7 +106,7 @@ const DEFAULT_CASE = (() => {
     // The bill the same month would have been without the system — the domain
     // the "bill after solar" readout is dark or bright against.
     billNow: simulation[1].monthlyBillNow,
-    netSavings25: Math.max(0, year25.statusQuo - year25.proposed),
+    netSavings25: year25.statusQuo - year25.proposed,
     // The ceiling on a 25-year saving: never paying the utility another cent.
     statusQuo25: year25.statusQuo,
     monthlyProduction,
@@ -624,6 +619,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
 
   // The page carries figures, so it carries their premises into the sticky bar.
   usePremises({
+    assumptionSet: DEFAULT_PROFILE.label,
     fields: [
       { label: 'System', value: solarSize.toFixed(1), unit: 'kW' },
       { label: 'Daily usage', value: dailyUsage.toFixed(1), unit: 'kWh' },
@@ -642,7 +638,7 @@ const HomeLanding = ({ onNavigate, tools }) => {
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <p className="eyebrow">SolarPro Toolkit</p>
         <p className="eyebrow">
-          <span className="text-d-good">Modelling</span>{' · CA Central Valley · 37.3°N'}
+          <span className="text-d-good">Modelling</span>{' · Sacramento, CA · 38.6°N'}
         </p>
       </div>
 
@@ -799,6 +795,17 @@ const HomeLanding = ({ onNavigate, tools }) => {
           <Premise label="Daily usage" value={dailyUsage.toFixed(1)} unit="kWh" />
           <Premise label="Blended rate" value={BLENDED_RATE.toFixed(3)} unit="$ / kWh" />
           <Premise label="Rate escalation" value={RATE_ESCALATION} unit="% / yr" />
+          <Premise label="Export credit" value={EXPORT_RATE.toFixed(2)} unit="$ / kWh" />
+          <Premise label="Fixed charge" value={FIXED_CHARGE} unit="$ / mo" />
+          <Premise label="System loss" value="14" unit="%" />
+          <p className="mt-3 text-ink-3" style={footnote}>
+            California planning example: the state-average price is not a utility tariff. Fixed and export charges are zero placeholders. Use your local bill in the calculator. Solar production uses NASA POWER's 2001–2020 Sacramento horizontal-reference climate data, 14% system loss, and no added orientation or clipping adjustment.
+          </p>
+          <p className="mt-2 text-ink-3" style={footnote}>
+            Reviewed {DEFAULT_PROFILE.reviewedAt}.{' '}
+            <a className="underline" href={DEFAULT_PROFILE.sources[0].url} target="_blank" rel="noreferrer">Electricity price source</a>{' · '}
+            <a className="underline" href="https://power.larc.nasa.gov/" target="_blank" rel="noreferrer">NASA POWER</a>
+          </p>
           <Premise label="Financing" value={LOAN_RATE.toFixed(2)} unit={`% · ${LOAN_TERM} yr`} />
           {/* `reason` takes a node, not a string, so this row can ink the one
               part of itself that is data. `--d-bad` means "expired / void

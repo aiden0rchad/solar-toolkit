@@ -1,6 +1,19 @@
 # SolarPro Toolkit Roadmap
 
-Backlog from early user feedback. Items are ordered by user impact, not effort.
+Implementation record from early user feedback, completed in both codebases on 2026-09-04. Checked decision items record the choices below, not delivery of a feature that was explicitly deferred.
+
+## Delivery decisions and boundaries
+
+- Inputs use tab/session storage by default, with explicit device persistence opt-in and per-tool reset. See [PERSISTENCE.md](PERSISTENCE.md).
+- Shared sizing, regional inputs, and DIY/installer comparisons are available in both builds. Consultant workflows and proposal generation stay in the private Pro repository. Existing entitlement/license activation is unchanged.
+- Initial utility starters are NRLP in Boone, NC and Tallahassee, FL. California, Arizona, and Massachusetts state averages are separately labeled planning proxies. The supported set is deliberately small; no nationwide tariff accuracy is claimed.
+- Five representative NASA POWER city profiles provide bundled 2001–2020 monthly irradiation. A city lookup was chosen over a large ZIP database; users can enter monthly resource or AC-yield values. Static resource/profile modules are below the 50 KB budget.
+- No live API is included. Source links require an explicit click; calculations make no third-party requests.
+- New lease/PPA acquisition comparisons and EV cash-out trade-in mode remain separate future features. Existing Pro PPA retrofit cash flows remain supported.
+
+Sources, formulas, limitations, and updates: [DATA_SOURCES.md](DATA_SOURCES.md), [FORMULAS.md](FORMULAS.md).
+
+Verification: 137 free tests and 115 Pro tests pass, along with lint and production builds. Browser regression checks cover navigation, reload, reset, device opt-in, malformed state, regional isolation, manual resources, sizing, invalid costs, installation finance, mobile overflow, keyboard focus, print, and third-party network requests. Both production previews pass; consultant flows are additionally tested using a local test-only entitlement override. CI runs tests, lint, and build for each PR.
 
 ## Product constraints
 
@@ -12,12 +25,12 @@ Backlog from early user feedback. Items are ordered by user impact, not effort.
 
 ## P0: Preserve user inputs between tools
 
-Inputs currently reset when a tool unmounts during navigation.
+Inputs now restore after tool unmount/navigation and reload, with versioned validation and scoped resets.
 
-- [ ] Preserve each tool's inputs for the current browser session.
-- [ ] Add an explicit **Reset to defaults** action to each tool.
-- [ ] Ignore invalid or outdated saved state safely.
-- [ ] Decide whether users should be able to opt into persistence across sessions.
+- [x] Preserve each tool's inputs for the current browser session.
+- [x] Add an explicit **Reset to defaults** action to each tool.
+- [x] Ignore invalid or outdated saved state safely.
+- [x] Decide whether users should be able to opt into persistence across sessions.
 
 Acceptance criteria:
 
@@ -30,10 +43,10 @@ Likely touchpoints: `src/App.jsx`, `src/tools/*.jsx`, and a small shared persist
 
 ## P1: Make the California scope unmistakable
 
-- [ ] Label current results as using California-oriented defaults.
-- [ ] Show the selected climate, utility-rate, and export-credit assumptions near results.
-- [ ] Warn when a user has not replaced California defaults with local values.
-- [ ] Update onboarding and the assumptions panel as regional support expands.
+- [x] Label current results as using California-oriented defaults.
+- [x] Show the selected climate, utility-rate, and export-credit assumptions near results.
+- [x] Warn when a user has not replaced California defaults with local values.
+- [x] Update onboarding and the assumptions panel as regional support expands.
 
 Acceptance criteria:
 
@@ -44,13 +57,13 @@ Acceptance criteria:
 
 Keep the current bill-first flow, then add an **Enter a system** mode.
 
-- [ ] Add panel count.
-- [ ] Add panel rated wattage in watts.
-- [ ] Calculate DC system size: `panel count × panel wattage / 1000`.
-- [ ] Add a target bill or annual-energy offset percentage for reverse sizing.
-- [ ] Report calculated annual production and achieved usage offset.
-- [ ] Keep system losses, orientation, degradation, and clipping assumptions visible.
-- [ ] Validate impossible, missing, and extreme values.
+- [x] Add panel count.
+- [x] Add panel rated wattage in watts.
+- [x] Calculate DC system size: `panel count × panel wattage / 1000`.
+- [x] Add a target bill or annual-energy offset percentage for reverse sizing.
+- [x] Report calculated annual production and achieved usage offset.
+- [x] Keep system losses, orientation, degradation, and clipping assumptions visible.
+- [x] Validate impossible, missing, and extreme values.
 
 Acceptance criteria:
 
@@ -85,12 +98,12 @@ Likely touchpoints: `src/tools/EVCalculator.jsx`, `src/engine/ev.js`, and the EV
 
 State alone is not precise enough. Model location, utility, tariff, and interconnection rules separately.
 
-- [ ] Define a versioned regional-profile schema.
-- [ ] Separate climate, import rates, fixed charges, export compensation, and escalation.
-- [ ] Support utility or tariff-specific generation and export caps where applicable.
-- [ ] Attach a source and last-reviewed date to every bundled profile.
-- [ ] Let unsupported users enter all relevant values manually.
-- [ ] Start with a small verified set of regions before expanding.
+- [x] Define a versioned regional-profile schema.
+- [x] Separate climate, import rates, fixed charges, export compensation, and escalation.
+- [x] Support utility or tariff-specific generation and export caps where applicable.
+- [x] Attach a source and last-reviewed date to every bundled profile.
+- [x] Let unsupported users enter all relevant values manually.
+- [x] Start with a small verified set of regions before expanding.
 
 Acceptance criteria:
 
@@ -103,12 +116,12 @@ Likely touchpoints: `src/data/ratePresets.js`, `src/data/nemRates.js`, `src/engi
 
 ## P2: Compare installation and ownership scenarios
 
-- [ ] Add DIY and turnkey installer scenarios.
-- [ ] Break out equipment, labor, permitting, interconnection, tax, and contingency costs.
-- [ ] Keep cash and financed ownership calculations distinct.
-- [ ] Model recurring maintenance or replacement costs where selected.
-- [ ] Consider lease and PPA support separately because their cash flows differ from ownership.
-- [ ] Allow side-by-side scenario comparison.
+- [x] Add DIY and turnkey installer scenarios.
+- [x] Break out equipment, labor, permitting, interconnection, tax, and contingency costs.
+- [x] Keep cash and financed ownership calculations distinct.
+- [x] Model recurring maintenance or replacement costs where selected.
+- [x] Consider lease and PPA support separately because their cash flows differ from ownership.
+- [x] Allow side-by-side scenario comparison.
 
 Acceptance criteria:
 
@@ -120,11 +133,11 @@ Acceptance criteria:
 
 Long-term ROI should use representative irradiance data, not current weather.
 
-- [ ] Replace broad climate presets with validated long-term monthly solar-resource data.
-- [ ] Evaluate a bundled region or ZIP lookup that works offline after load.
-- [ ] Include dataset source, period, resolution, and update process.
-- [ ] Keep manual monthly production or sun-hour entry available.
-- [ ] Only consider a live API as an explicit opt-in with clear privacy and failure behavior.
+- [x] Replace broad climate presets with validated long-term monthly solar-resource data.
+- [x] Evaluate a bundled region or ZIP lookup that works offline after load.
+- [x] Include dataset source, period, resolution, and update process.
+- [x] Keep manual monthly production or sun-hour entry available.
+- [x] Only consider a live API as an explicit opt-in with clear privacy and failure behavior.
 
 Acceptance criteria:
 
@@ -137,17 +150,17 @@ Likely touchpoints: `src/engine/solar.js`, a new static data module, and `src/to
 
 ## Cross-cutting verification
 
-- [ ] Add regression tests for navigation state.
-- [ ] Add calculation fixtures for every supported regional profile.
-- [ ] Show new inputs and derived values in the assumptions panel.
-- [ ] Check keyboard use, labels, mobile layout, and print output.
-- [ ] Confirm the production build still makes zero external requests.
-- [ ] Document formulas and data provenance in the repository.
+- [x] Add regression tests for navigation state.
+- [x] Add calculation fixtures for every supported regional profile.
+- [x] Show new inputs and derived values in the assumptions panel.
+- [x] Check keyboard use, labels, mobile layout, and print output.
+- [x] Confirm the production build still makes zero external requests.
+- [x] Document formulas and data provenance in the repository.
 
 ## Decisions before implementation
 
-- [ ] Session-only persistence or optional long-term local persistence?
-- [ ] Which utilities or regions should ship first?
-- [ ] Which new capabilities belong in the free and Pro experiences?
-- [ ] How large can bundled irradiance data become before load time suffers?
-- [ ] Should lease and PPA modeling be part of this roadmap or a separate project?
+- [x] Session-only persistence or optional long-term local persistence?
+- [x] Which utilities or regions should ship first?
+- [x] Which new capabilities belong in the free and Pro experiences?
+- [x] How large can bundled irradiance data become before load time suffers?
+- [x] Should lease and PPA modeling be part of this roadmap or a separate project?

@@ -1,10 +1,11 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo } from 'react';
+import { useToolState } from '../state/useToolState';
 import { FileText } from 'lucide-react';
 import Rail from '../components/Rail';
 import { MARKERS } from '../components/markers';
 import { Card, Figure, InputField, Marker, Perforation, RampLegend, StruckRow, toneForValue } from '../components/ui';
 import { usePremises } from '../components/useShell';
-import { SUN_PROFILES, annualSunHours } from '../engine/solar';
+import { annualProductionPerKw, buildMonthlySolarFactors } from '../engine/solar';
 
 // =============================================================================
 // INSTRUMENT — Usage Estimator.
@@ -43,9 +44,10 @@ const WATER_HEATER_KWH = { 'Gas': 0, 'Electric': 12, 'Heat Pump': 4 };
 
 // The sizing basis. Pure reads of the engine's tables — hoisted only so the
 // rail can print the same numbers the estimate is built from.
-const SUN_PROFILE = 'CA Central Valley';
-const SUN_HOURS = annualSunHours(SUN_PROFILE);
-const WINTER_SUN_HOURS = SUN_PROFILES[SUN_PROFILE][11];
+const SUN_PROFILE = 'Sacramento representative';
+const MONTHLY_SOLAR_FACTORS = buildMonthlySolarFactors({ resourceId: 'sacramento' }).monthlySolarFactors;
+const SUN_HOURS = annualProductionPerKw(MONTHLY_SOLAR_FACTORS) / 365;
+const WINTER_SUN_HOURS = MONTHLY_SOLAR_FACTORS[11];
 
 /** The two sidenotes this sheet keys, in house order. */
 const SIZING_MARKER = MARKERS[0];
@@ -210,16 +212,16 @@ const BasisRow = ({ term, children }) => (
 );
 
 const UsageEstimator = ({ onExport }) => {
-  const [sqFt, setSqFt] = useState(2000);
-  const [occupants, setOccupants] = useState(4);
-  const [hasPool, setHasPool] = useState(false);
-  const [evMiles, setEvMiles] = useState(30);
-  const [numEVs, setNumEVs] = useState(1);
-  const [acUsage, setAcUsage] = useState(5);
-  const [homeAge, setHomeAge] = useState('2000+');
-  const [climateZone, setClimateZone] = useState('Hot');
-  const [waterHeater, setWaterHeater] = useState('Gas');
-  const [utilityRate, setUtilityRate] = useState(0.40);
+  const [sqFt, setSqFt] = useToolState('sqFt', 2000);
+  const [occupants, setOccupants] = useToolState('occupants', 4);
+  const [hasPool, setHasPool] = useToolState('hasPool', false);
+  const [evMiles, setEvMiles] = useToolState('evMiles', 30);
+  const [numEVs, setNumEVs] = useToolState('numEVs', 1);
+  const [acUsage, setAcUsage] = useToolState('acUsage', 5);
+  const [homeAge, setHomeAge] = useToolState('homeAge', '2000+');
+  const [climateZone, setClimateZone] = useToolState('climateZone', 'Hot');
+  const [waterHeater, setWaterHeater] = useToolState('waterHeater', 'Gas');
+  const [utilityRate, setUtilityRate] = useToolState('utilityRate', 0.40);
 
   const estimation = useMemo(() => {
     const baseLoad = (sqFt * 0.005 * AGE_MULTIPLIER[homeAge]) + (occupants * 2.5);
@@ -460,9 +462,16 @@ const UsageEstimator = ({ onExport }) => {
             <Marker symbol={SIZING_MARKER} />
           </h3>
           <dl>
-            <BasisRow term={`Sun hours, ${SUN_PROFILE}`}>{SUN_HOURS.toFixed(1)} hrs / day</BasisRow>
-            <BasisRow term="Sun hours, December">{WINTER_SUN_HOURS.toFixed(1)} hrs / day</BasisRow>
+            <BasisRow term={`AC yield, ${SUN_PROFILE}`}>{SUN_HOURS.toFixed(1)} kWh / kW / day</BasisRow>
+            <BasisRow term="AC yield, December">{WINTER_SUN_HOURS.toFixed(1)} kWh / kW / day</BasisRow>
           </dl>
+          <p className="mt-3 text-ink-3" style={footnote}>
+            Sizing uses representative Sacramento NASA POWER climate data with 14% system losses,
+            orientation multiplier 1, and no added clipping loss, not an exact local roof estimate.
+            Bill estimates use your entered ${fig(utilityRate, 2)}/kWh rate and a 30-day month.
+            The regional profile in the solar calculator does not change this helper. Use the{' '}
+            <a href="#/simple-roi" className="underline">solar calculator</a> for a sourced location estimate.
+          </p>
 
           <h3 className="eyebrow mb-2 mt-6">
             Load basis

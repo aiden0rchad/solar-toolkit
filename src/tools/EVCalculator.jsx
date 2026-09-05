@@ -1,4 +1,5 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo } from 'react';
+import { useToolState } from '../state/useToolState';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Check } from 'lucide-react';
 import { Card, ChartTab, Figure, InputField, StruckRow, toneForValue } from '../components/ui';
@@ -7,6 +8,8 @@ import { usePremises } from '../components/useShell';
 import { barChartProps, currencyTick, currencyValue, useChartTheme } from '../components/chartTheme';
 import { evDatabase } from '../data/evDatabase';
 import { computeEvStats } from '../engine/ev';
+
+const isCurrentEV = value => value && evDatabase.some(ev => Object.keys(ev).every(key => ev[key] === value[key]));
 
 // =============================================================================
 // INSTRUMENT — EV vs. gas.
@@ -287,12 +290,12 @@ const EVCalculator = ({ onExport }) => {
   const years = [...new Set(evDatabase.map(ev => ev.year))].sort((a, b) => b - a);
   const categories = [...new Set(evDatabase.map(ev => ev.category))].sort();
 
-  const [filterMake, setFilterMake] = useState('All');
-  const [filterYear, setFilterYear] = useState('All');
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareList, setCompareList] = useState([]);
+  const [filterMake, setFilterMake] = useToolState('filterMake', 'All');
+  const [filterYear, setFilterYear] = useToolState('filterYear', 'All');
+  const [filterCategory, setFilterCategory] = useToolState('filterCategory', 'All');
+  const [searchQuery, setSearchQuery] = useToolState('searchQuery', '');
+  const [compareMode, setCompareMode] = useToolState('compareMode', false);
+  const [compareList, setCompareList] = useToolState('compareList', [], value => Array.isArray(value) && value.length <= 3 && value.every(isCurrentEV));
 
   const filteredEVs = useMemo(() => {
     return evDatabase.filter(ev => {
@@ -304,33 +307,33 @@ const EVCalculator = ({ onExport }) => {
     });
   }, [filterMake, filterYear, filterCategory, searchQuery]);
 
-  const [selectedEV, setSelectedEV] = useState(evDatabase[0]);
-  const [annualMiles, setAnnualMiles] = useState(12000);
-  const [gasPrice, setGasPrice] = useState(4.80);
-  const [iceMPG, setIceMPG] = useState(25);
-  const [elecRate, setElecRate] = useState(0.35);
+  const [selectedEV, setSelectedEV] = useToolState('selectedEV', evDatabase[0], isCurrentEV);
+  const [annualMiles, setAnnualMiles] = useToolState('annualMiles', 12000);
+  const [gasPrice, setGasPrice] = useToolState('gasPrice', 4.80);
+  const [iceMPG, setIceMPG] = useToolState('iceMPG', 25);
+  const [elecRate, setElecRate] = useToolState('elecRate', 0.35);
   const iceMaintCost = 800;
   const evMaintCost = 300;
 
   // Financing & Insurance
-  const [currentCarStatus, setCurrentCarStatus] = useState('paidoff'); // paidoff | loan
-  const [currentCarPayment, setCurrentCarPayment] = useState(450);
-  const [currentCarMonthsLeft, setCurrentCarMonthsLeft] = useState(36);
-  const [currentInsurance, setCurrentInsurance] = useState(150);
+  const [currentCarStatus, setCurrentCarStatus] = useToolState('currentCarStatus', 'paidoff'); // paidoff | loan
+  const [currentCarPayment, setCurrentCarPayment] = useToolState('currentCarPayment', 450);
+  const [currentCarMonthsLeft, setCurrentCarMonthsLeft] = useToolState('currentCarMonthsLeft', 36);
+  const [currentInsurance, setCurrentInsurance] = useToolState('currentInsurance', 150);
 
-  const [evPurchaseMethod, setEvPurchaseMethod] = useState('finance'); // finance | lease | cash
-  const [evPrice, setEvPrice] = useState(42000);
-  const [evDownPayment, setEvDownPayment] = useState(5000);
-  const [evLoanTerm, setEvLoanTerm] = useState(72);
-  const [evInterestRate, setEvInterestRate] = useState(6.5);
-  const [evLeasePayment, setEvLeasePayment] = useState(450);
-  const [evLeaseTerm, setEvLeaseTerm] = useState(36);
-  const [evLeaseDueAtSigning, setEvLeaseDueAtSigning] = useState(3000);
-  const [evInsurance, setEvInsurance] = useState(190);
-  const [ownYears, setOwnYears] = useState(5);
-  const [evRegFee, setEvRegFee] = useState(118); // CA Road Improvement Fee for ZEVs
-  const [tradeInValue, setTradeInValue] = useState(0);
-  const [resalePct, setResalePct] = useState(45); // % of purchase price retained at end
+  const [evPurchaseMethod, setEvPurchaseMethod] = useToolState('evPurchaseMethod', 'finance'); // finance | lease | cash
+  const [evPrice, setEvPrice] = useToolState('evPrice', 42000);
+  const [evDownPayment, setEvDownPayment] = useToolState('evDownPayment', 5000);
+  const [evLoanTerm, setEvLoanTerm] = useToolState('evLoanTerm', 72);
+  const [evInterestRate, setEvInterestRate] = useToolState('evInterestRate', 6.5);
+  const [evLeasePayment, setEvLeasePayment] = useToolState('evLeasePayment', 450);
+  const [evLeaseTerm, setEvLeaseTerm] = useToolState('evLeaseTerm', 36);
+  const [evLeaseDueAtSigning, setEvLeaseDueAtSigning] = useToolState('evLeaseDueAtSigning', 3000);
+  const [evInsurance, setEvInsurance] = useToolState('evInsurance', 190);
+  const [ownYears, setOwnYears] = useToolState('ownYears', 5);
+  const [evRegFee, setEvRegFee] = useToolState('evRegFee', 118); // CA Road Improvement Fee for ZEVs
+  const [tradeInValue, setTradeInValue] = useToolState('tradeInValue', 0);
+  const [resalePct, setResalePct] = useToolState('resalePct', 45); // % of purchase price retained at end
 
   const toggleCompare = (ev) => {
     setCompareList(prev => {
@@ -1009,6 +1012,11 @@ const EVCalculator = ({ onExport }) => {
           <Premise label="EV registration" value={count(evRegFee)} unit="$ / yr" />
           <Premise label="Gas insurance" value={count(currentInsurance)} unit="$ / mo" />
           <Premise label="EV insurance" value={count(evInsurance)} unit="$ / mo" />
+          <p className="mt-4 text-xs text-ink-3">
+            Gas and charging prices are editable planning inputs. The annual EV fee starts from a
+            California-based $118 example, not a verified current fee. Enter your local EV-specific
+            fee and prices. These inputs are independent of the solar calculator's regional profile.
+          </p>
         </aside>
       </Rail>
     </div>

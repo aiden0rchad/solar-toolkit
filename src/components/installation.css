@@ -1,0 +1,21 @@
+.installation-comparison { color: var(--ink-2, #cbd5e1); }
+.installation-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.installation-inputs section { min-width: 0; }
+.installation-select-label { display: grid; gap: .4rem; font-size: .85rem; }
+.installation-select-label select { width: 100%; padding: .5rem; color: inherit; background: var(--surface, #111827); border: 1px solid var(--control-edge, #94a3b8); }
+.installation-reset { cursor: pointer; text-decoration: underline; text-underline-offset: .2em; font-size: .8rem; }
+.installation-table { overflow-x: auto; }
+.installation-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .85rem; }
+.installation-table caption { text-align: left; font-weight: 600; margin-bottom: .7rem; }
+.installation-table th, .installation-table td { padding: .45rem; border-bottom: 1px solid var(--rule, #334155); text-align: right; }
+.installation-table th:first-child { text-align: left; font-weight: 400; }
+.installation-table :is(td, th) { overflow-wrap: anywhere; }
+@media (max-width: 540px) { .installation-inputs { grid-template-columns: minmax(0, 1fr); } }
+@media print {
+  .installation-comparison { break-before: page; color: #111; background: #fff; }
+  .installation-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .installation-inputs input, .installation-select-label select { color: #111 !important; background: #fff !important; }
+  .installation-reset { display: none; }
+  .installation-table { overflow: visible; }
+  .installation-table tr { break-inside: avoid; }
+}

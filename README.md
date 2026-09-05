@@ -93,6 +93,10 @@ Or build it locally with `docker build -t solar-toolkit .` if you prefer. The ap
 
 ## Development
 
+The feedback roadmap adds saved inputs with an optional device setting, panel-count/wattage sizing, energy-offset targets, editable regional assumptions, and an itemized DIY/installer comparison. Solar-resource data is bundled for five representative cities. The initial utility examples are NRLP in Boone and Tallahassee; other bundled prices are clearly labeled state-average planning proxies. Enter local tariff terms or monthly production values for an unsupported location.
+
+See [ROADMAP.md](ROADMAP.md) for delivery decisions, [DATA_SOURCES.md](DATA_SOURCES.md) for profile sources and update instructions, [FORMULAS.md](FORMULAS.md) for calculation limits and browser checks, and [PERSISTENCE.md](PERSISTENCE.md) for saving and resetting inputs. Lease/new-PPA contract comparisons remain a separate feature.
+
 ```bash
 npm install
 npm run dev

@@ -435,12 +435,10 @@ export const MonthStrip = ({ values, labels = MONTH_LABELS, caption, className =
           {cells.map((_, i) => {
             const mark = marks.find((m) => m.index === i);
             return (
-              <span key={i} className="min-w-0 flex-1">
+              <span key={i} className={`flex min-w-0 flex-1 ${i <= 1 ? 'justify-start' : i >= 10 ? 'justify-end' : 'justify-center'}`}>
                 {mark && (
                   <span
-                    className={`eyebrow block whitespace-nowrap ${
-                      i <= 1 ? 'text-left' : i >= 10 ? 'text-right' : 'text-center'
-                    }`}
+                    className="eyebrow block shrink-0 whitespace-nowrap"
                   >
                     {labels[i]} · {mark.text}
                   </span>

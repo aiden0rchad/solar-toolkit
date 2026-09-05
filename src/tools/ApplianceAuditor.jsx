@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
+import { useToolState } from '../state/useToolState';
 import {
   Box, Car, CookingPot, Droplets, Flame, Gamepad2,
   Settings, Shirt, Snowflake, Waves, Wind, Zap,
@@ -8,7 +9,7 @@ import { usePremises } from '../components/useShell';
 import { MARKERS } from '../components/markers';
 import { Card, InputField, Marker, Perforation, RampLegend, toneForValue } from '../components/ui';
 import { presets } from '../data/appliancePresets';
-import { annualSunHours } from '../engine/solar';
+import { annualProductionPerKw, buildMonthlySolarFactors } from '../engine/solar';
 
 // =============================================================================
 // INSTRUMENT — Appliance Auditor.
@@ -79,7 +80,7 @@ const CUSTOM_ICON_KEY = '\u2699\uFE0F';
 // --- PREMISES ----------------------------------------------------------------
 
 /** The production factor behind "Required system increase" — kWh per kW per day. */
-const CV_SUN_HOURS = annualSunHours('CA Central Valley');
+const CV_SUN_HOURS = annualProductionPerKw(buildMonthlySolarFactors({ resourceId: 'sacramento' }).monthlySolarFactors) / 365;
 
 /** Flat blended rate. Printed in the rail, published to the context bar. */
 const UTILITY_RATE = 0.40;
@@ -234,11 +235,11 @@ const ApplianceAuditor = ({ onExport }) => {
   // Ties each caption to the group it names — a bare label above a stack of
   // rows labels nothing.
   const uid = useId();
-  const [items, setItems] = useState([]);
-  const [customName, setCustomName] = useState('');
+  const [items, setItems] = useToolState('items', [], value => Array.isArray(value) && value.every(item => item && typeof item.name === 'string' && typeof item.icon === 'string' && Number.isFinite(item.id) && Number.isFinite(item.kwh)));
+  const [customName, setCustomName] = useToolState('customName', '');
   // NaN is "cleared", which is how InputField distinguishes an empty box from a
   // typed zero. `NaN > 0` is false, so the add guard below needs no extra test.
-  const [customKwh, setCustomKwh] = useState(NaN);
+  const [customKwh, setCustomKwh] = useToolState('customKwh', NaN);
 
   const addItem = (preset) => setItems([...items, { ...preset, id: Date.now() + Math.random() }]);
 
@@ -505,8 +506,11 @@ const ApplianceAuditor = ({ onExport }) => {
           </dl>
           <p className="mt-4 text-ink-3" style={footnote}>
             The rate is flat: no time-of-use split, no seasonal step, no escalation. The annual figure is
-            twelve of the monthly one. The production factor is the CA Central Valley annual average, so a
-            different region sizes differently. The running total is inked across a domain running from
+            twelve of the monthly one. Production uses representative Sacramento NASA POWER climate data
+            with 14% system losses, orientation multiplier 1, and no added clipping loss, not an exact
+            local roof estimate. Regional selections in other tools do not change this helper.
+            Use the <a href="#/simple-roi" className="underline">solar calculator</a> for local rates and sourced production.
+            The running total is inked across a domain running from
             nothing added to every load in this catalogue at once.
           </p>
           <p className="mt-3 text-ink-3" style={footnote}>
