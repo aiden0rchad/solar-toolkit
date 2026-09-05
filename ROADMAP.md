@@ -13,7 +13,9 @@ Implementation record from early user feedback, completed in both codebases on 2
 
 Sources, formulas, limitations, and updates: [DATA_SOURCES.md](DATA_SOURCES.md), [FORMULAS.md](FORMULAS.md).
 
-Verification: 137 free tests and 115 Pro tests pass, along with lint and production builds. Browser regression checks cover navigation, reload, reset, device opt-in, malformed state, regional isolation, manual resources, sizing, invalid costs, installation finance, mobile overflow, keyboard focus, print, and third-party network requests. Both production previews pass; consultant flows are additionally tested using a local test-only entitlement override. CI runs tests, lint, and build for each PR.
+Verification: 161 free tests and 139 Pro tests pass, along with lint and production builds. Browser regression checks cover navigation, reload, reset, device opt-in, malformed state, regional isolation, manual resources, sizing, invalid costs, installation finance, mobile overflow, keyboard focus, print, and third-party network requests. Both production previews pass; consultant flows are additionally tested using a local test-only entitlement override. CI runs tests, lint, and build for each PR.
+
+Solar Savings now starts with “Guide me through” or “Let me plug in all my numbers.” The four-step guide covers the bill, explicit location choice, system sizing, and budget, then shows a concise estimate with printable assumptions. Switching paths retains values; guided progress also survives navigation/reload. The full calculator and calculation engines are unchanged. `scripts/verify-solar-wizard.mjs` checks both paths, validation, storage, keyboard, mobile, and print behavior.
 
 ## Product constraints
 

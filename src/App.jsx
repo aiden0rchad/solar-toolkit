@@ -173,7 +173,7 @@ const App = () => {
               Below it the marginalia rail falls beneath the main column; it is
               never hidden, because the assumptions have to stay reachable on
               every screen. */}
-          <div className="mx-auto grid w-full max-w-[96rem] grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-12 px-4 pb-20 pt-7 lg:px-8 print:m-0 print:block print:p-0 [@media(min-width:1340px)]:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="tool-page-grid mx-auto grid w-full max-w-[96rem] grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-12 px-4 pb-20 pt-7 lg:px-8 print:m-0 print:block print:p-0 [@media(min-width:1340px)]:grid-cols-[minmax(0,1fr)_22rem]">
             {/* The fallback is a static 1px rule, not a spinner or a pulse.
                 Nothing in this interface moves, so a loading state is a ruled
                 placeholder holding the measure until the chunk arrives. */}

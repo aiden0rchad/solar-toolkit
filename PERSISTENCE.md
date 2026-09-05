@@ -8,6 +8,8 @@ No calculator inputs are uploaded. Free and Pro use separate storage namespaces.
 
 ## Implementation
 
+Solar Savings also remembers the selected guided/full experience, the current guided step, and explicit location confirmation. Switching paths keeps the same calculator values. Reset returns to the two-choice welcome screen and clears the guide’s progress along with that tool’s inputs.
+
 Tool components use `useToolState('fieldName', defaultValue, optionalValidator)` inside the app's `ToolStateContext`. Stable names, not hook order, address fields. Reset clears the scope and remounts the active component, including derived state. App-level proposal data uses the `app` scope.
 
 Version 1 envelopes contain `{ version: 1, tools: { toolId: { fieldName: value } } }`. Restore checks version, size, nesting, JSON-safe values, and field types/shapes. Invalid fields fall back to current defaults. Nullable and empty-array fields supply explicit validators. Saved defaults are not written until changed, so new defaults take effect for untouched fields. Bump the schema version when changing incompatible field meanings.

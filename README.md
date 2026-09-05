@@ -42,7 +42,7 @@ Defaults are California flavored (TOU rates, NEM 3.0, CA climate profiles), but 
 
 | Tool | What it answers |
 |---|---|
-| **Solar Savings (Simple)** | Bill in, payback out. Same engine as the full calculator, just fewer knobs. |
+| **Solar Savings (Simple)** | Choose a four-step guide or enter all your numbers. The guide ends with a plain-language estimate; both paths use the same inputs and calculation engine. |
 | **Blackout Simulator** | How long a battery really runs your fridge, wifi, or CPAP. |
 | **EV Switch** | EV versus your current car, with a built in vehicle database. |
 | **Usage Estimator** | Rough out your home's kWh when you don't have a bill handy. |
