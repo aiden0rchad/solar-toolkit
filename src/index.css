@@ -449,6 +449,9 @@ html[data-theme='dark'] {
 }
 
 @media print {
+  .print\:hidden { display: none !important; }
+  .print\:block { display: block !important; }
+
   :root,
   :root[data-theme='light'],
   :root[data-theme='dark'] {

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useToolState } from '../state/useToolState';
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Plus } from 'lucide-react';
 import { MARKERS } from '../components/markers';
@@ -144,19 +145,19 @@ const decimal = (n) => (Number.isFinite(n) ? String(n) : '—');
 
 // --- TOOL: BLACKOUT SIMULATOR (Enhanced) ---
 const BlackoutSimulator = ({ onExport }) => {
-  const [batterySize, setBatterySize] = useState(13.5);
+  const [batterySize, setBatterySize] = useToolState('batterySize', 13.5);
   // Read from the data file rather than repeating its first label here: two
   // presets share 13.5 kWh, so the selected one has to be tracked by name, and
   // a typo'd name would silently show the index with nothing selected.
-  const [preset, setPreset] = useState(batteryPresets[0].label);
-  const [solarRecharge, setSolarRecharge] = useState(false);
-  const [solarOutput, setSolarOutput] = useState(5);
+  const [preset, setPreset] = useToolState('preset', batteryPresets[0].label);
+  const [solarRecharge, setSolarRecharge] = useToolState('solarRecharge', false);
+  const [solarOutput, setSolarOutput] = useToolState('solarOutput', 5);
   // The inverter, which the model used to pretend was not there. Editable,
   // because both figures vary by a wide margin across real hardware and a
   // number the reader cannot check is a number they have to take on faith.
-  const [inverterEfficiency, setInverterEfficiency] = useState(DEFAULT_INVERTER_EFFICIENCY);
-  const [inverterStandbyW, setInverterStandbyW] = useState(DEFAULT_INVERTER_STANDBY_W);
-  const [activeLoads, setActiveLoads] = useState([
+  const [inverterEfficiency, setInverterEfficiency] = useToolState('inverterEfficiency', DEFAULT_INVERTER_EFFICIENCY);
+  const [inverterStandbyW, setInverterStandbyW] = useToolState('inverterStandbyW', DEFAULT_INVERTER_STANDBY_W);
+  const [activeLoads, setActiveLoads] = useToolState('activeLoads', [
     { id: 1, name: 'Refrigerator', watts: 150, category: 'Essential', active: true },
     { id: 2, name: 'Wi-Fi Router', watts: 15, category: 'Essential', active: true },
     { id: 3, name: 'LED Lights (10)', watts: 100, category: 'Essential', active: true },
@@ -168,8 +169,8 @@ const BlackoutSimulator = ({ onExport }) => {
     { id: 9, name: 'Sump Pump', watts: 800, category: 'Essential', active: false },
     { id: 10, name: 'Garage Door', watts: 600, category: 'Comfort', active: false },
   ]);
-  const [customName, setCustomName] = useState('');
-  const [customWatts, setCustomWatts] = useState('');
+  const [customName, setCustomName] = useToolState('customName', '');
+  const [customWatts, setCustomWatts] = useToolState('customWatts', '');
   const toggleLoad = (id) => setActiveLoads(activeLoads.map(l => l.id === id ? { ...l, active: !l.active } : l));
   const addCustom = () => { if (customName && customWatts > 0) { setActiveLoads([...activeLoads, { id: Date.now(), name: customName, watts: parseInt(customWatts), category: 'Custom', active: true }]); setCustomName(''); setCustomWatts(''); } };
   const totalWatts = activeLoads.filter(l => l.active).reduce((a, c) => a + c.watts, 0);
@@ -556,7 +557,9 @@ const BlackoutSimulator = ({ onExport }) => {
             ))}
           </dl>
           <p className="mt-4 text-ink-3" style={footnote}>
-            This is an estimate, not a quote or guarantee. Actual utility rates, production, usage, financing, and incentives can change your results.
+            This is a fixed outage scenario, not a local weather forecast. Solar recharge follows the
+            stated daylight curve in every location and does not use the solar calculator's regional dataset.
+            Real shading, seasonal daylight, appliance surges, and weather can shorten backup time.
           </p>
         </aside>
       </Rail>

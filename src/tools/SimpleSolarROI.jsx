@@ -1,14 +1,20 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowRight } from 'lucide-react';
 import AssumptionsPanel from '../components/AssumptionsPanel';
+import SolarInputs from '../components/SolarInputs';
+import { solarFinanceErrors } from '../components/solarFinance';
+import SolarResultNotes from '../components/SolarResultNotes';
+import InstallationScenarios from '../components/InstallationScenarios';
+import { useSolarInputs } from '../components/useSolarInputs';
+import { useToolState } from '../state/useToolState';
 import Rail from '../components/Rail';
 import { usePremises } from '../components/useShell';
 import { currencyTick, currencyValue, rampIndexFor, useChartTheme } from '../components/chartTheme';
 import { MARKERS } from '../components/markers';
 import { Card, ChartTab, Figure, InputField, MonthStrip, RampLegend, StruckRow, toneForValue } from '../components/ui';
 import { calculatePMT, findBreakEven, runRoiSimulation } from '../engine/roi';
-import { LOAD_SHAPES, SUN_PROFILES, annualSunHours } from '../engine/solar';
+import { LOAD_SHAPES } from '../engine/solar';
 
 // =============================================================================
 // INSTRUMENT — Simple Solar ROI.
@@ -41,13 +47,6 @@ import { LOAD_SHAPES, SUN_PROFILES, annualSunHours } from '../engine/solar';
 // about the world is information, and omitting it is the thing every other
 // calculator does.
 // =============================================================================
-
-const PEAK_SHARE = 35;
-const PEAK_RATE = 0.58;
-const OFF_PEAK_RATE = 0.42;
-const RATE_ESCALATION = 5;
-const EXPORT_RATE = 0.04;
-const BLENDED_RATE = PEAK_RATE * PEAK_SHARE / 100 + OFF_PEAK_RATE * (1 - PEAK_SHARE / 100);
 
 /**
  * THE DISCLOSURE the struck row points at, written once and printed twice: on
@@ -254,33 +253,36 @@ const SimpleSolarROI = ({ onNavigate }) => {
   // Ties each caption to the button group it names — a bare label above a row of
   // buttons labels nothing.
   const uid = useId();
-  const [monthlyBill, setMonthlyBill] = useState(250);
-  const [sunProfile, setSunProfile] = useState('CA Central Valley');
-  const [loadShape, setLoadShape] = useState('Dual Peak (AC + Heat)');
-  const [systemCostOverride, setSystemCostOverride] = useState(null);
-  const [payMethod, setPayMethod] = useState('loan');
+  const [monthlyBill, setMonthlyBill] = useToolState('monthlyBill', 250);
+  const [loadShape, setLoadShape] = useToolState('loadShape', 'Dual Peak (AC + Heat)');
+  const [systemCostOverride, setSystemCostOverride] = useToolState('systemCostOverride', null, value => value === null || Number.isFinite(value));
+  const [payMethod, setPayMethod] = useToolState('payMethod', 'loan');
   // IRC 25D ended for post-2025 installs under the law signed 2025-07-04; IRC 48E applies to qualifying third-party owners.
-  const [incentives, setIncentives] = useState(0);
+  const [incentives, setIncentives] = useToolState('incentives', 0);
+  const solar = useSolarInputs({ monthlyBill });
 
   // Series and chrome for the theme actually on screen — resolved at runtime,
   // never a hex in this file.
   const chart = useChartTheme();
 
-  const safeBill = Number.isFinite(monthlyBill) ? Math.max(0, monthlyBill) : 0;
-  const dailyUsage = safeBill / 30 / BLENDED_RATE;
-  const solarSize = Math.round((dailyUsage / annualSunHours(sunProfile)) * 10) / 10;
+  const dailyUsage = solar.dailyUsage;
+  const solarSize = solar.systemSize;
   const estimatedCost = Math.round(solarSize * 3000 / 100) * 100;
   const systemCost = systemCostOverride ?? estimatedCost;
   const netSystemCost = Math.max(0, systemCost - Math.max(0, incentives || 0));
   const loanInterest = payMethod === 'loan' ? 7.99 : 0;
   const loanTerm = payMethod === 'loan' ? 25 : 1;
-  const monthlyPayment = calculatePMT(netSystemCost, loanInterest, loanTerm);
+  const monthlyPayment = payMethod === 'loan' ? calculatePMT(netSystemCost, loanInterest, loanTerm) : 0;
+  const financeErrors = solarFinanceErrors({ systemCost, incentives, purchaseMethod: payMethod, loanInterest, loanTerm });
+  const validCosts = financeErrors.length === 0;
+  const valid = solar.errors.length === 0 && validCosts;
 
   const simParams = {
     loanAmount: systemCost,
     incentives,
     loanInterest,
     loanTerm,
+    purchaseMethod: payMethod,
     proposalMode: 'new',
     existingSolarType: 'loan',
     existingSolarBalance: 0,
@@ -292,23 +294,17 @@ const SimpleSolarROI = ({ onNavigate }) => {
     roundTripEfficiency: 90,
     degradationRate: 1,
     dailyUsage,
-    peakUsagePercent: PEAK_SHARE,
-    ratePeak: PEAK_RATE,
-    rateOffPeak: OFF_PEAK_RATE,
-    inflationRate: RATE_ESCALATION,
     solarSize,
-    sunProfile,
-    monthlyFixedCharge: 15,
-    solarExportRate: EXPORT_RATE,
     loadShape,
     strategy: 'self',
+    ...solar.params,
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const simulation = useMemo(() => runRoiSimulation(simParams), [JSON.stringify(simParams)]);
+  const simulation = useMemo(() => valid ? runRoiSimulation(simParams) : [], [JSON.stringify(simParams), valid]);
   const payback = findBreakEven(simulation);
-  const year1 = simulation[1];
-  const year25 = simulation[25];
-  const savings25 = Math.max(0, year25.statusQuo - year25.proposed);
+  const year1 = simulation[1] ?? { monthlyBillNow: 0, monthlyBillFuture: 0 };
+  const year25 = simulation[25] ?? { statusQuo: 0, proposed: 0, gridOnly: 0 };
+  const savings25 = year25.statusQuo - year25.proposed;
 
   // netLiability — the crossing findBreakEven reports — is exactly
   // (proposed - gridOnly), so the annotation sits on the visual crossing.
@@ -338,9 +334,9 @@ const SimpleSolarROI = ({ onNavigate }) => {
   // orphaned from the system they describe.
   usePremises({
     fields: [
-      { label: 'System', value: solarSize.toFixed(1), unit: 'kW' },
-      { label: 'Daily usage', value: dailyUsage.toFixed(1), unit: 'kWh' },
-      { label: 'Blended rate', value: BLENDED_RATE.toFixed(3), unit: '$/kWh' },
+      { label: 'System', value: valid ? solarSize.toFixed(1) : 'Unavailable', unit: 'kW' },
+      { label: 'Daily usage', value: valid ? dailyUsage.toFixed(1) : 'Unavailable', unit: 'kWh' },
+      { label: 'Blended rate', value: valid ? solar.blendedRate.toFixed(3) : 'Unavailable', unit: '$/kWh' },
     ],
   });
 
@@ -370,9 +366,9 @@ const SimpleSolarROI = ({ onNavigate }) => {
       note: payMethod === 'loan' ? `includes $${Math.round(monthlyPayment)}/mo loan` : null,
     },
     {
-      label: '25-year savings',
+      label: savings25 < 0 ? '25-year additional cost' : '25-year savings',
       prefix: '$',
-      value: Math.round(savings25).toLocaleString(),
+      value: Math.round(Math.abs(savings25)).toLocaleString(),
       tone: toneForValue(savings25, 0, Math.max(year25.gridOnly, 1)),
     },
   ];
@@ -405,16 +401,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
 
             <InputField label="Monthly electric bill now" value={monthlyBill} onChange={setMonthlyBill} unit="$ / mo" step="10" />
 
-            <div className="mb-4">
-              <span id={`${uid}-region`} className="eyebrow mb-1 block">Region</span>
-              <div role="group" aria-labelledby={`${uid}-region`}>
-                {Object.keys(SUN_PROFILES).map(region => (
-                  <Choice key={region} selected={sunProfile === region} onClick={() => setSunProfile(region)}>
-                    {region}
-                  </Choice>
-                ))}
-              </div>
-            </div>
+            <SolarInputs solar={solar} />
 
             <div className="mb-4">
               <span id={`${uid}-load-shape`} className="eyebrow mb-1 block">Roughly how you use power</span>
@@ -461,12 +448,14 @@ const SimpleSolarROI = ({ onNavigate }) => {
               ))}
             </div>
             <p className="mt-2.5 text-ink-3" style={footnote}>
-              Loan estimate: 7.99% for 25 years. Cash is modeled as paid in year one.
+              Loan estimate: 7.99% for 25 years. Cash is paid upfront.
             </p>
+            {financeErrors.map(error => <p key={error} role="alert" className="mt-3 text-sm text-ink-2">{error}</p>)}
           </Card>
         </section>
 
         <section aria-label="Your estimate" className="min-w-0">
+          {!valid ? <Card className="p-5"><p role="status">Your estimate is unavailable until the highlighted inputs are corrected.</p></Card> : <>
           <Card className="px-5 pb-6 pt-4">
             <SectionHead number="02">Your estimate</SectionHead>
 
@@ -484,7 +473,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
                 which is what the low stop is for. */}
             <div className="mt-2.5 border-b-2 border-rule-strong pb-1.5">
               <Readout
-                label="Payback"
+                label="Sustained payback"
                 value={payback ? payback : '25+'}
                 unit="yrs"
                 step={46}
@@ -554,6 +543,8 @@ const SimpleSolarROI = ({ onNavigate }) => {
               )}
             />
 
+            <p className="mt-3 text-xs text-ink-2">Sustained payback is the point after which cumulative solar costs remain no higher than the utility baseline through year 25. It is interpolated between annual estimates, not a guarantee beyond this horizon.</p>
+            <SolarResultNotes year={year1} targetOffsetPct={solar.values.targetOffsetPct} />
             <hr className="rule-strong mt-8" />
             <SectionHead number="04" className="mt-2.5">Cumulative cost</SectionHead>
             <div className="mt-1 flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline">
@@ -614,7 +605,7 @@ const SimpleSolarROI = ({ onNavigate }) => {
                     <ReferenceLine
                       {...chart.annotationLine}
                       x={breakEvenYear}
-                      label={{ ...chart.annotationLabel, value: `Breaks even · yr ${payback}`, position: 'top' }}
+                      label={{ ...chart.annotationLabel, value: `Sustained payback · yr ${payback}`, position: 'top' }}
                     />
                   )}
                 </AreaChart>
@@ -635,6 +626,8 @@ const SimpleSolarROI = ({ onNavigate }) => {
               <ArrowRight size={14} aria-hidden="true" />
             </button>
           </Card>
+          <InstallationScenarios simulationParams={simParams} systemSize={solarSize} />
+          </>}
         </section>
       </div>
 
@@ -659,14 +652,15 @@ const SimpleSolarROI = ({ onNavigate }) => {
             <span className="text-d-bad">{DISCLOSURE.reason}</span>
           </p>
         </aside>
-        <AssumptionsPanel
-          rateEscalation={RATE_ESCALATION}
-          exportRate={EXPORT_RATE}
-          peakRate={PEAK_RATE}
-          offPeakRate={OFF_PEAK_RATE}
-          blendedRate={BLENDED_RATE}
+        {valid && <AssumptionsPanel
+          rateEscalation={solar.values.inflationRate}
+          exportRate={solar.values.solarExportRate}
+          peakRate={solar.values.ratePeak}
+          offPeakRate={solar.values.rateOffPeak}
+          blendedRate={solar.blendedRate}
+          panelDegradation={solar.values.panelDegradationPct}
           markerOffset={1}
-        />
+        />}
       </Rail>
     </div>
   );

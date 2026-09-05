@@ -5,6 +5,10 @@ import ProUpsellModal from './components/ProUpsellModal';
 import { ShellContext } from './components/useShell';
 import { useEntitlement } from './entitlement/useEntitlement';
 import { TOOLS } from './tools/registry';
+import InputStorageControls from './components/InputStorageControls';
+import { ToolStateContext, useToolState } from './state/useToolState';
+import { inputStore } from './state/store';
+import { EMPTY_PROPOSAL, isProposal } from './state/inputStore';
 
 const EXPORT_SECTIONS = {
   consult: 'roi',
@@ -53,13 +57,8 @@ const App = () => {
   const { isPro } = useEntitlement();
   const [view, setView] = useState(viewFromHash);
   const [showProUpsell, setShowProUpsell] = useState(false);
-  const [proposalData, setProposalData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('solartoolkit-proposal');
-      if (saved) return JSON.parse(saved);
-    } catch { /* corrupted or unavailable storage — start fresh */ }
-    return { clientName: '', roi: null, usage: null, audit: null, ev: null, blackout: null, bill: null };
-  });
+  const [proposalData, setProposalData] = useToolState('proposalData', EMPTY_PROPOSAL, isProposal);
+  const [resetVersion, setResetVersion] = useState(0);
 
   // --- shell slots ---------------------------------------------------------
   // The rail is a DOM node tools portal into; premises are stamped with the
@@ -75,10 +74,6 @@ const App = () => {
   }, []);
 
   const shell = useMemo(() => ({ railNode, publishPremises }), [railNode, publishPremises]);
-
-  useEffect(() => {
-    try { localStorage.setItem('solartoolkit-proposal', JSON.stringify(proposalData)); } catch { /* storage full/blocked */ }
-  }, [proposalData]);
 
   useEffect(() => {
     const handleHashChange = () => setView(viewFromHash());
@@ -110,6 +105,14 @@ const App = () => {
 
   const activeTool = TOOLS.find(tool => tool.id === view) || TOOLS[0];
   const ActiveComponent = activeTool.component;
+  const resetActiveTool = () => {
+    inputStore.reset(view);
+    if (view === 'proposal') {
+      inputStore.reset('app');
+      setProposalData({ ...EMPTY_PROPOSAL });
+    }
+    setResetVersion(version => version + 1);
+  };
   const activeProps = activeTool.id === 'home'
     ? { onNavigate: setView, tools: TOOLS }
     : activeTool.id === 'simple-roi'
@@ -178,7 +181,10 @@ const App = () => {
               {(activeTool.tier === 'pro' && !isPro) || !activeTool.component
                 ? <ProLockCard tool={activeTool} onNavigate={setView} />
                 : <Suspense fallback={<div className="h-px w-full bg-rule" role="status" aria-label="Loading" />}>
-                    <ActiveComponent {...activeProps} />
+                    <ToolStateContext.Provider key={`${view}-${resetVersion}`} value={view}>
+                      {!['home', 'nem1', 'nem2', 'nem3'].includes(view) && <InputStorageControls onReset={resetActiveTool} toolTitle={activeTool.title} />}
+                      <ActiveComponent {...activeProps} />
+                    </ToolStateContext.Provider>
                   </Suspense>}
             </main>
             {/* The MARGINALIA rail. Tools portal sidenotes in through <Rail>;

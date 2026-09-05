@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
+import { useToolState } from '../state/useToolState';
 import { Card, Figure, Marker, Perforation } from '../components/ui';
 import Rail from '../components/Rail';
 import { MARKERS } from '../components/markers';
@@ -141,7 +142,7 @@ const Swatch = ({ elim, opacity, patternId }) => (
 );
 
 const BillDecoder = ({ onExport }) => {
-  const [lineItems, setLineItems] = useState([
+  const [lineItems, setLineItems] = useToolState('lineItems', [
     { id: 'generation', label: 'Generation Charges', amount: 142.50, description: 'The actual cost of creating the electricity. This is the main part Solar replaces.', solarElim: true },
     { id: 'transmission', label: 'Transmission', amount: 45.20, description: 'The cost to move electricity from power plants over high-voltage lines to your neighborhood substation.', solarElim: true },
     { id: 'distribution', label: 'Distribution', amount: 62.15, description: 'The cost to deliver power from the substation to your house (poles and wires).', solarElim: false },
@@ -409,6 +410,12 @@ const BillDecoder = ({ onExport }) => {
         <aside className="pt-4">
           <Perforation className="mb-4" label="Notes follow" />
           <h3 className="mb-2 font-semibold text-ink" style={{ fontSize: 'var(--size-15)', lineHeight: 'var(--lh-15)', letterSpacing: 'var(--track-15)' }}>What this means for you</h3>
+          <p className="mb-3 text-ink-2" style={LINE}>
+            This California-style example assumes generation and transmission are fully offset.
+            It does not calculate production, exports, or your utility's tariff. Charge names and which
+            charges solar can reduce vary by utility; these figures are an illustration, not a savings forecast.
+            Regional selections elsewhere do not change these categories.
+          </p>
           <dl>
             <div className="border-b border-rule py-1.5">
               <dt className="text-ink" style={LINE}>
