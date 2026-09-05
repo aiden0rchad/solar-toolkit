@@ -1,0 +1,85 @@
+.solar-wizard { --sw-surface: var(--surface, #111827); --sw-raised: var(--raised, #1e293b); --sw-ink: var(--ink, #e2e8f0); --sw-body: var(--ink-2, #cbd5e1); --sw-muted: var(--ink-3, #94a3b8); --sw-rule: var(--rule-strong, #475569); --sw-edge: var(--control-edge, #94a3b8); color: var(--sw-body); max-width: 860px; margin: 0 auto; padding: 6px 0 30px; }
+.tool-page-grid:has(.solar-wizard) { grid-template-columns: minmax(0, 1fr); }
+.tool-page-grid:has(.solar-wizard) > aside:empty { display: none; }
+.solar-wizard-header { margin-bottom: 29px; max-width: 650px; }
+.solar-wizard h1, .solar-wizard h2 { color: var(--sw-ink); font-size: clamp(26px, 3vw, 36px); line-height: 1.16; font-weight: 600; margin: 9px 0 13px; letter-spacing: -.025em; }
+.solar-wizard h1:focus, .solar-wizard h2:focus { outline: none; }
+.solar-full-heading:focus { outline: none; }
+.solar-wizard p { font-size: 15px; line-height: 1.6; }
+.solar-wizard .solar-wizard-kicker { font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--sw-muted); }
+.solar-wizard button, .solar-wizard input, .solar-wizard select { font: inherit; transition: none; }
+.solar-wizard button { cursor: pointer; }
+.solar-wizard :is(button, input, select, summary, a):focus-visible { outline: 2px solid var(--sw-ink); outline-offset: 4px; }
+.solar-wizard-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px; }
+.solar-wizard-path { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; padding: 27px 23px; border: 1px solid var(--sw-edge); border-top-width: 3px; background: var(--sw-surface); color: var(--sw-body); text-align: left; min-height: 310px; }
+.solar-wizard-path:hover { background: var(--sw-raised); }
+.solar-wizard-path strong { color: var(--sw-ink); font-size: 23px; font-weight: 600; line-height: 1.2; }
+.solar-wizard-path > span:not(.solar-wizard-kicker) { line-height: 1.6; }
+.solar-wizard-path-action { display: flex; align-items: center; justify-content: space-between; align-self: stretch; margin-top: auto; padding-top: 15px; font-size: 13px; color: var(--sw-ink); }
+.solar-wizard .solar-wizard-note { color: var(--sw-muted); font-size: 13px; line-height: 1.6; margin-top: 13px; }
+.solar-wizard > .solar-wizard-note { margin-top: 23px; }
+.solar-wizard-progress ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; list-style: none; gap: 10px; margin: 0 0 21px; }
+.solar-wizard-progress li { display: flex; gap: 8px; align-items: center; border-top: 2px solid var(--sw-rule); padding-top: 11px; color: var(--sw-muted); font-size: 12px; }
+.solar-wizard-progress li[aria-current] { color: var(--sw-ink); font-weight: 700; border-color: var(--sw-ink); }
+.solar-wizard-progress li > span:first-child { font-variant-numeric: tabular-nums; }
+.solar-wizard-sheet { margin-top: 13px; padding: 27px; background: var(--sw-surface); border-top: 2px solid var(--sw-rule); }
+.solar-wizard-sheet > p:first-child { margin-bottom: 23px; }
+.solar-wizard-field { display: block; margin: 19px 0; color: var(--sw-ink); font-size: 15px; }
+.solar-wizard-field > span:first-child { display: block; margin-bottom: 8px; font-weight: 500; }
+.solar-wizard-field select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid var(--sw-edge); border-radius: 2px; padding: 10px; background: var(--sw-surface); color: var(--sw-ink); }
+.solar-wizard-number { display: flex; align-items: center; border-bottom: 1px solid var(--sw-edge); gap: 10px; }
+.solar-wizard-number input { width: 100%; min-width: 0; min-height: 48px; background: transparent; color: var(--sw-ink); border: 0; font-size: 24px; font-variant-numeric: tabular-nums; padding: 6px 0; }
+.solar-wizard-number > span { flex-shrink: 0; color: var(--sw-muted); font-size: 13px; }
+.solar-wizard-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px; }
+.solar-wizard-location { margin-top: 17px; }
+.solar-wizard-location-details { margin-top: 17px; }
+.solar-wizard-location-details summary { padding: 12px 0; cursor: pointer; font-size: 14px; color: var(--sw-ink); }
+.solar-wizard-options { display: grid; gap: 11px; margin: 19px 0; }
+.solar-wizard-option { display: flex; align-items: flex-start; text-align: left; padding: 16px; gap: 13px; border: 1px solid var(--sw-edge); background: transparent; color: var(--sw-body); }
+.solar-wizard-option[aria-pressed=true] { border-color: var(--sw-ink); background: var(--sw-raised); }
+.solar-wizard-option-mark { display: flex; align-items: center; justify-content: center; border: 1px solid var(--sw-edge); width: 19px; height: 19px; flex-shrink: 0; margin-top: 2px; }
+.solar-wizard-option strong { color: var(--sw-ink); font-weight: 600; }
+.solar-wizard-option small { display: block; font-size: 13px; margin-top: 5px; line-height: 1.5; }
+.solar-wizard-sizing { border-top: 1px solid var(--sw-rule); padding-top: 19px; margin-top: 23px; }
+.solar-wizard-sizing span { display: block; font-size: 13px; color: var(--sw-muted); }
+.solar-wizard-actions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 13px; margin-top: 29px; }
+.solar-wizard-primary, .solar-wizard-secondary { min-height: 46px; padding: 12px 18px; display: inline-flex; justify-content: center; align-items: center; gap: 11px; font-weight: 600 !important; border: 1px solid var(--sw-edge); }
+.solar-wizard-primary { background: var(--sw-ink); color: var(--sw-surface); }
+.solar-wizard-secondary { background: transparent; color: var(--sw-ink); }
+.solar-wizard-link { color: var(--sw-body); text-decoration: underline; text-underline-offset: 4px; background: transparent; border: 0; padding: 10px 0; min-height: 44px; font-size: 13px !important; text-align: left; }
+.solar-wizard-switch { margin-top: 15px; }
+.solar-wizard-errors { margin-top: 23px; padding: 17px; border: 1px solid var(--sw-edge); font-size: 14px; }
+.solar-wizard-errors ul { list-style: disc; padding-left: 20px; margin-top: 8px; }
+.solar-wizard-verdict { background: var(--sw-surface); padding: 23px; border-top: 2px solid var(--sw-rule); }
+.solar-wizard h3 { color: var(--sw-ink); font-weight: 600; font-size: 20px; line-height: 1.35; margin-bottom: 11px; }
+.solar-wizard-verdict h3 { margin-top: 10px; }
+.solar-wizard-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 23px; margin: 29px 0; }
+.solar-wizard-results > div { border-top: 1px solid var(--sw-rule); padding-top: 17px; }
+.solar-wizard-results dt { font-size: 13px; line-height: 1.5; }
+.solar-wizard-results dd { color: var(--sw-ink); font-size: 29px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; margin: 11px 0; }
+.solar-wizard-results small { display: block; font-size: 12px; font-weight: 400; margin-top: 4px; }
+.solar-wizard-results p { font-size: 12px; color: var(--sw-muted); }
+.solar-wizard-summary { border-top: 2px solid var(--sw-rule); padding-top: 23px; }
+.solar-wizard-summary dl > div { display: grid; grid-template-columns: 1fr 1fr; gap: 19px; font-size: 13px; line-height: 1.6; padding: 10px 0; border-bottom: 1px solid var(--sw-rule); }
+.solar-wizard-summary dd { text-align: right; color: var(--sw-ink); }
+.solar-wizard-disclosure { margin-top: 23px; font-size: 13px; }
+.solar-wizard-disclosure summary { cursor: pointer; padding: 12px 0; color: var(--sw-ink); }
+.solar-wizard-disclosure p { font-size: 13px; margin: 10px 0; }
+.solar-wizard-disclosure a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 600px) {
+  .solar-wizard-paths, .solar-wizard-results { grid-template-columns: minmax(0, 1fr); }
+  .solar-wizard-path { min-height: 0; padding: 21px; gap: 11px; }
+  .solar-wizard-sheet { padding: 21px 17px; }
+  .solar-wizard-progress li { align-items: flex-start; font-size: 11px; gap: 5px; }
+  .solar-wizard-summary dl > div { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .solar-wizard-summary dd { text-align: left; }
+  .solar-wizard-summary-actions > button { width: 100%; }
+}
+@media print {
+  .solar-wizard { --sw-surface: #fff; --sw-raised: #f1f5f9; --sw-ink: #111; --sw-body: #222; --sw-muted: #444; --sw-rule: #aaa; --sw-edge: #555; max-width: none; }
+  .solar-wizard :is(button, .solar-wizard-progress) { display: none !important; }
+  .solar-wizard-disclosure > div { display: block !important; }
+  .solar-wizard-disclosure::details-content { content-visibility: visible; }
+  .solar-wizard-results { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solar-wizard-results > div, .solar-wizard-summary dl > div { break-inside: avoid; }
+}

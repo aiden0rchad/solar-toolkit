@@ -182,6 +182,13 @@ and become texture.
 
 ## Structure
 
+Solar Savings has an intentional beginner exception to the dense split-pane rule:
+start with a guided/full-calculator choice, show one short input step at a time,
+then a concise estimate. No default result is shown before the guided answers are
+complete. Assumptions remain visible in the summary, with full details available
+and included in print. The full calculator retains the instrument layout. Mode
+switches preserve values; resetting the tool returns to the initial choice.
+
 - **Navigation is a vertical rail, not a horizontal bar.** Thirteen views do not fit a
   horizontal bar; that pattern tops out around seven. The rail is 220–240px, grouped under mono
   section labels (Start here / Tools / Pro / Net metering), with 32–34px rows in sentence case

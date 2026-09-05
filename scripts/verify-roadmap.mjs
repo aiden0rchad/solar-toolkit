@@ -41,6 +41,7 @@ const checkValue = async (label, expected) => assert.equal(await field(label).in
 
 try {
   await page.goto(`${base}/#/simple-roi`);
+  await page.getByRole('button', { name: 'Let me plug in all my numbers', exact: true }).click();
   await field('Monthly electric bill now').waitFor();
   await field('Monthly electric bill now').fill('321');
   await navigate('ev');
@@ -61,6 +62,7 @@ try {
   await checkValue('Your Current Car MPG', 17.5);
   await navigate('simple-roi');
   await page.getByRole('button', { name: /^Reset .* to defaults$/ }).click();
+  await page.getByRole('button', { name: 'Let me plug in all my numbers', exact: true }).click();
   await checkValue('Monthly electric bill now', 250);
 
   await field('Monthly electric bill now').fill('345');
@@ -131,6 +133,7 @@ try {
     for (const key of Object.keys(sessionStorage).filter(key => key.endsWith(':inputs'))) sessionStorage.setItem(key, '{bad json');
   });
   await page.reload();
+  await page.getByRole('button', { name: 'Let me plug in all my numbers', exact: true }).click();
   await field('Monthly electric bill now').waitFor();
   await checkValue('Monthly electric bill now', 250);
 

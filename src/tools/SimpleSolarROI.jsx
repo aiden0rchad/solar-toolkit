@@ -1,8 +1,10 @@
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useMemo, useRef } from 'react';
 import { Area, AreaChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowRight } from 'lucide-react';
 import AssumptionsPanel from '../components/AssumptionsPanel';
 import SolarInputs from '../components/SolarInputs';
+import SolarSavingsWizard from '../components/SolarSavingsWizard';
+import { isSolarExperience } from '../components/solarWizard';
 import { solarFinanceErrors } from '../components/solarFinance';
 import SolarResultNotes from '../components/SolarResultNotes';
 import InstallationScenarios from '../components/InstallationScenarios';
@@ -253,6 +255,9 @@ const SimpleSolarROI = ({ onNavigate }) => {
   // Ties each caption to the button group it names — a bare label above a row of
   // buttons labels nothing.
   const uid = useId();
+  const [experience, setExperience] = useToolState('solarExperience', 'choose', isSolarExperience);
+  const fullHeading = useRef(null);
+  useEffect(() => { if (experience === 'full') fullHeading.current?.focus(); }, [experience]);
   const [monthlyBill, setMonthlyBill] = useToolState('monthlyBill', 250);
   const [loadShape, setLoadShape] = useToolState('loadShape', 'Dual Peak (AC + Heat)');
   const [systemCostOverride, setSystemCostOverride] = useToolState('systemCostOverride', null, value => value === null || Number.isFinite(value));
@@ -333,11 +338,11 @@ const SimpleSolarROI = ({ onNavigate }) => {
   // The premises the sticky context bar carries, so the figures below are never
   // orphaned from the system they describe.
   usePremises({
-    fields: [
+    fields: experience === 'full' || experience === 'summary' ? [
       { label: 'System', value: valid ? solarSize.toFixed(1) : 'Unavailable', unit: 'kW' },
       { label: 'Daily usage', value: valid ? dailyUsage.toFixed(1) : 'Unavailable', unit: 'kWh' },
       { label: 'Blended rate', value: valid ? solar.blendedRate.toFixed(3) : 'Unavailable', unit: '$/kWh' },
-    ],
+    ] : [],
   });
 
   // The supporting run. Each is its own readout block with its own unit — the
@@ -373,20 +378,33 @@ const SimpleSolarROI = ({ onNavigate }) => {
     },
   ];
 
+  if (experience !== 'full') return <SolarSavingsWizard
+    experience={experience}
+    onExperienceChange={setExperience}
+    solar={solar}
+    inputs={{ monthlyBill, setMonthlyBill, loadShape, setLoadShape, systemCost, estimatedCost, systemCostOverride, setSystemCostOverride, incentives, setIncentives, payMethod, setPayMethod }}
+    financeErrors={financeErrors}
+    result={{ valid, payback, year1, savings25, monthlyPayment, netSystemCost }}
+  />;
+
   return (
     <div>
       <header className="mb-7">
-        <p className="eyebrow">Simple Solar ROI</p>
+        <p className="eyebrow">Solar savings · full calculator</p>
         {/* The masthead carries the page <h1>; every view heads at h2. */}
         <h2
-          className="mt-1 font-semibold text-ink"
+          ref={fullHeading}
+          tabIndex={-1}
+          className="solar-full-heading mt-1 font-semibold text-ink"
           style={typeAt(26)}
         >
           Is solar worth it for me?
         </h2>
         <p className="mt-1.5 max-w-[52ch] text-ink-2" style={typeAt(15)}>
-          Use a recent monthly bill for a quick estimate. You can inspect every assumption below.
+          All your inputs and assumptions in one place. Keep the starting estimates or replace them with your own numbers.
         </p>
+        <button type="button" className="mt-3 text-sm text-ink-2 underline underline-offset-4 print:hidden" onClick={() => setExperience('choose')}>Change input mode</button>
+        <p className="mt-1 text-xs text-ink-3 print:hidden">Your numbers stay with you when you switch paths.</p>
       </header>
 
       {/* SPLIT PANE. Premises left and pinned, readouts right and live — the
