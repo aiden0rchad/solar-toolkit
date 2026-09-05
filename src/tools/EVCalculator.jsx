@@ -909,7 +909,7 @@ const EVCalculator = ({ onExport }) => {
             {/* FIG. 1 — fixed category colors, matching legend and segment edges. */}
             <hr className="rule-strong mt-10" />
             <BlockHead title={`${ownYears}-Year Total Cost of Ownership`} className="mt-2.5" />
-            <div className="ev-tco-chart mt-3 h-[300px]">
+            <div className="ev-tco-chart mt-3 h-[300px] overflow-x-clip">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.chartData} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }} {...barChartProps}>
                   <XAxis {...chart.xAxisProps} type="number" tickFormatter={currencyTick} />
