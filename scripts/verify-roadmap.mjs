@@ -45,6 +45,13 @@ try {
   await field('Monthly electric bill now').fill('321');
   await navigate('ev');
   await field('Your Current Car MPG').fill('17.5');
+  // A hidden desktop tooltip must not stretch the page after a mobile resize.
+  await page.setViewportSize({ width: 1920, height: 1000 });
+  await page.locator('.ev-tco-chart .recharts-bar-rectangle path').last().hover();
+  await page.mouse.move(0, 0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await navigate('simple-roi');
   await checkValue('Monthly electric bill now', 321);
   await page.reload();
