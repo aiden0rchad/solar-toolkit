@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowUpRight, Coffee } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { TOOLS } from '../tools/registry';
 
@@ -185,6 +186,23 @@ const WORDMARK_TYPE = {
   letterSpacing: 'var(--track-17)',
 };
 
+const SupportLink = () => (
+  <div className="flex-none border-t border-rule px-3 py-3">
+    <p className="text-xs leading-relaxed text-ink-2">Support future development and testing.</p>
+    <a
+      href="https://www.buymeacoffee.com/aiden0rchad"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 flex min-h-11 items-center gap-2 border border-control-edge bg-surface px-3 text-[13px] font-semibold text-ink hover:bg-raised"
+    >
+      <Coffee size={16} strokeWidth={1.5} aria-hidden="true" />
+      Buy me a coffee
+      <span className="sr-only"> (opens in a new tab)</span>
+      <ArrowUpRight size={14} strokeWidth={1.5} className="ml-auto" aria-hidden="true" />
+    </a>
+  </div>
+);
+
 /**
  * The nav in both of its forms. The rail is the ≥1000px expression; the top bar
  * and its overlay are the same list under a disclosure below that. Only one is
@@ -240,6 +258,7 @@ export const NavRail = ({ view, isPro, onNavigate }) => {
           <nav aria-label="Toolkit sections" className="min-h-0 flex-1 overflow-y-auto pb-6">
             <NavList idPrefix="rail" view={view} isPro={isPro} onSelect={navigate} />
           </nav>
+          <SupportLink />
           <hr className="rule" />
           <div className="flex flex-none items-center px-3 py-2">
             <ThemeToggle />
@@ -306,6 +325,7 @@ export const NavRail = ({ view, isPro, onNavigate }) => {
             <nav aria-label="Toolkit sections" className="min-h-0 flex-1 overflow-y-auto pb-6">
               <NavList idPrefix="menu" view={view} isPro={isPro} onSelect={navigate} />
             </nav>
+            <SupportLink />
           </div>
         </div>
       )}
