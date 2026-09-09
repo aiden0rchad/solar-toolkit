@@ -166,3 +166,9 @@ Likely touchpoints: `src/engine/solar.js`, a new static data module, and `src/to
 - [x] Which new capabilities belong in the free and Pro experiences?
 - [x] How large can bundled irradiance data become before load time suffers?
 - [x] Should lease and PPA modeling be part of this roadmap or a separate project?
+
+## Support future development
+
+If this toolkit helps you, consider buying me a coffee. Your support helps fund future development and testing. Thank you!
+
+<a href="https://www.buymeacoffee.com/aiden0rchad"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50"></a>
