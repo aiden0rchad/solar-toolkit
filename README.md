@@ -14,9 +14,11 @@ It runs in dark or light, following your system by default. Everything you see i
 
 Most solar calculators online are lead generators. They exist to make solar look good so you'll leave your phone number. This one is just the math. Sometimes the math says yes, sometimes it says keep your money, and I think a calculator should be fine with either answer.
 
-If this tool helps you, please consider donating. I'm a university student and the job market is really bad right now, so every bit genuinely helps.
+## Support future development
 
-<a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50" width="180"></a>
+If this toolkit helps you, consider buying me a coffee. Your support helps fund future development and testing. Thank you!
+
+<a href="https://www.buymeacoffee.com/aiden0rchad"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50"></a>
 
 ## Start with your question
 
