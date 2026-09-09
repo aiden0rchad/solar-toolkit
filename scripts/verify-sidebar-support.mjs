@@ -68,7 +68,7 @@ try {
   if (await lightToggle.count()) {
     await lightToggle.click();
     await checkLink();
-    await page.screenshot({ path: join(output, 'desktop-light.png') });
+    await page.screenshot({ path: join(output, 'desktop-light.png'), animations: 'disabled' });
     await page.getByRole('button', { name: 'Switch to dark theme', exact: true }).locator('visible=true').click();
   }
 
